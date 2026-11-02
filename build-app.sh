@@ -1,7 +1,7 @@
 #!/bin/bash
 # Builds Fuxi.app into ./build and signs it ad hoc for local use.
 # Theme names package extra copies with that theme as their default:
-#   ./build-app.sh steampunk retroApple ibmTerminal
+#   ./build-app.sh steampunk os9 tron
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -31,9 +31,9 @@ package "" "Fuxi" ""
 for t in "$@"; do
     case "$t" in
         steampunk)   package steampunk   "Fuxi Steampunk" steampunk ;;
-        retroApple)  package retroApple  "Fuxi Retro"     retroapple ;;
-        ibmTerminal) package ibmTerminal "Fuxi Terminal"  ibmterminal ;;
-        *) echo "Unknown theme: $t (use steampunk, retroApple or ibmTerminal)" >&2; exit 1 ;;
+        os9)         package os9         "Fuxi OS 9"      os9 ;;
+        tron)        package tron        "Fuxi Tron"      tron ;;
+        *) echo "Unknown theme: $t (use steampunk, os9 or tron)" >&2; exit 1 ;;
     esac
 done
 

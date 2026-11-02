@@ -223,17 +223,19 @@ struct ThingsSection<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            VStack(spacing: 5) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(title).font(Fx.font(size: 13, weight: .semibold)).foregroundStyle(Fx.accent)
-                    Spacer()
-                    if let trailing { trailing }
-                    if let count {
-                        Text(count).font(Fx.font(size: 12).monospacedDigit()).foregroundStyle(.secondary)
+            Fx.theme.applySectionHeader(to: AnyView(
+                VStack(spacing: 5) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(title).font(Fx.font(size: 13, weight: .semibold)).foregroundStyle(Fx.accent)
+                        Spacer()
+                        if let trailing { trailing }
+                        if let count {
+                            Text(count).font(Fx.font(size: 12).monospacedDigit()).foregroundStyle(.secondary)
+                        }
                     }
+                    Rectangle().fill(Fx.accent.opacity(0.35)).frame(height: 1)
                 }
-                Rectangle().fill(Fx.accent.opacity(0.35)).frame(height: 1)
-            }
+            ))
             content
         }
     }

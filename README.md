@@ -78,9 +78,25 @@ Each row can **Restore Default…** (write the macOS value back) or **Stop Keepi
 
 Every change with the time, the old value and the new value, and a **Revert…** button. **Clear History** empties the list without changing any settings.
 
-### Layouts
+### Layouts and themes
 
 The default layout uses cards and sections. **View › Classic Layout** (⇧⌘L) switches to a standard list layout. Both show the same data.
+
+**View › Theme** restyles the default layout:
+
+| Theme | Look |
+|---|---|
+| Standard | The macOS system look |
+| Mac OS 9 | Platinum grey, bevelled panels, pinstriped section headers, lavender-blue highlights, Charcoal (or Geneva) |
+| Tron | Black grid, glowing cyan chamfered panels, uppercase glowing headings, Orbitron (or a condensed sans) |
+| Steampunk | Mahogany and brass, corner brackets, Hoefler Text |
+
+Severity colours stay the same in every theme. To build copies that open in a theme by default:
+
+```sh
+./build-app.sh os9 tron steampunk
+open build/"Fuxi OS 9.app" build/"Fuxi Tron.app"
+```
 
 ## What Fuxi checks
 
@@ -236,6 +252,7 @@ Sources/Fuxi/
   ScriptExport.swift     The apply and boot scripts, save panel, clipboard command
   Persistence.swift      state.json and reading /etc/sysctl.conf
   XProtect.swift         XProtect and Software Update state
+  Themes/                Theme protocol, Mac OS 9, Tron and Steampunk
   Things.swift           Default card layout
   Views.swift            Classic layout
 ```

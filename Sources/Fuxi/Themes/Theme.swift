@@ -6,7 +6,7 @@ import SwiftUI
 // The classic layout is not themed.
 
 public enum ThemeType: String, CaseIterable, Identifiable {
-    case standard, steampunk, retroApple, ibmTerminal
+    case standard, steampunk, os9, tron
 
     public var id: String { rawValue }
 
@@ -14,8 +14,8 @@ public enum ThemeType: String, CaseIterable, Identifiable {
         switch self {
         case .standard: return "Standard"
         case .steampunk: return "Steampunk"
-        case .retroApple: return "Retro Apple"
-        case .ibmTerminal: return "IBM Terminal"
+        case .os9: return "Mac OS 9"
+        case .tron: return "Tron"
         }
     }
 
@@ -23,8 +23,8 @@ public enum ThemeType: String, CaseIterable, Identifiable {
         switch self {
         case .standard: return StandardTheme()
         case .steampunk: return SteampunkTheme()
-        case .retroApple: return RetroAppleTheme()
-        case .ibmTerminal: return IBMTerminalTheme()
+        case .os9: return OS9Theme()
+        case .tron: return TronTheme()
         }
     }
 
@@ -33,16 +33,16 @@ public enum ThemeType: String, CaseIterable, Identifiable {
         switch self {
         case .standard: return []
         case .steampunk: return ["Baskerville", "Georgia"]
-        case .retroApple: return ["ChicagoFLF", "Geneva"]
-        case .ibmTerminal: return ["IBMPlexMono", "Menlo-Regular"]
+        case .os9: return ["CharcoalCY", "Geneva"]
+        case .tron: return ["Orbitron", "AvenirNextCondensed-DemiBold", "DINCondensed-Bold"]
         }
     }
 
     var colorScheme: ColorScheme? {
         switch self {
         case .standard: return nil
-        case .retroApple: return .light
-        case .steampunk, .ibmTerminal: return .dark
+        case .os9: return .light
+        case .steampunk, .tron: return .dark
         }
     }
 
@@ -66,6 +66,15 @@ public protocol DashboardTheme {
     var fontName: String { get }
     func applyPanelStyle(to view: AnyView) -> AnyView
     func applyButtonStyle(to view: AnyView) -> AnyView
+    /// Gauge fill below the warning level.
+    var barColor: Color { get }
+    /// Wraps a section's title row and rule.
+    func applySectionHeader(to view: AnyView) -> AnyView
+}
+
+public extension DashboardTheme {
+    var barColor: Color { colors.foreground }
+    func applySectionHeader(to view: AnyView) -> AnyView { view }
 }
 
 /// The system look: unchanged from before themes existed.
@@ -109,7 +118,7 @@ enum Fx {
     static var muted: Color { isStandard ? .secondary : theme.colors.foreground.opacity(0.6) }
     static var hairline: Color { isStandard ? Color.primary.opacity(0.1) : theme.colors.border.opacity(0.6) }
     /// Gauge fill below the warning level.
-    static var bar: Color { isStandard ? .teal : theme.colors.foreground }
+    static var bar: Color { isStandard ? .teal : theme.barColor }
 
     static func font(size: CGFloat, weight: Font.Weight = .regular) -> Font {
         let name = ThemeStore.resolvedFont
