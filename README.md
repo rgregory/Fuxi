@@ -4,6 +4,8 @@ Fuxi is a native macOS app that reviews the kernel's `sysctl` settings for secur
 
 It is written for a developer Mac on Apple silicon: one that runs containers, VMs, VPN tunnels and local language models. The recommendations assume that. Read each finding's explanation before applying it to a different kind of machine.
 
+![Fuxi Overview: system facts, kernel limits and security posture](docs/overview.png)
+
 - [Requirements](#requirements)
 - [Build and install](#build-and-install)
 - [The five screens](#the-five-screens)
