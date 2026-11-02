@@ -1,10 +1,10 @@
 import SwiftUI
 
-// MARK: - Mac OS 9 Theme (Platinum)
+// MARK: - Retro Theme (Mac OS 9 Platinum)
 
 /// Platinum grey, bevelled panels, pinstriped headers, lavender-blue highlights.
-public struct OS9Theme: DashboardTheme {
-    public let id: ThemeType = .os9
+public struct RetroTheme: DashboardTheme {
+    public let id: ThemeType = .retro
 
     public let colors = ThemeColors(
         background: Color(white: 0.87),                          // Platinum desktop grey

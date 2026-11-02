@@ -87,15 +87,15 @@ The default layout uses cards and sections. **View › Classic Layout** (⇧⌘L
 | Theme | Look |
 |---|---|
 | Standard | The macOS system look |
-| Mac OS 9 | Platinum grey, bevelled panels, pinstriped section headers, lavender-blue highlights, Charcoal (or Geneva) |
+| Retro | Mac OS 9 Platinum: grey, bevelled panels, pinstriped section headers, lavender-blue highlights, Charcoal (or Geneva) |
 | Tron | Black grid, glowing cyan chamfered panels, uppercase glowing headings, Orbitron (or a condensed sans) |
 | Steampunk | Mahogany and brass, corner brackets, Hoefler Text |
 
 Severity colours stay the same in every theme. To build copies that open in a theme by default:
 
 ```sh
-./build-app.sh os9 tron steampunk
-open build/"Fuxi OS 9.app" build/"Fuxi Tron.app"
+./build-app.sh retro tron steampunk
+open build/"Fuxi Retro.app" build/"Fuxi Tron.app"
 ```
 
 ## What Fuxi checks
@@ -252,7 +252,7 @@ Sources/Fuxi/
   ScriptExport.swift     The apply and boot scripts, save panel, clipboard command
   Persistence.swift      state.json and reading /etc/sysctl.conf
   XProtect.swift         XProtect and Software Update state
-  Themes/                Theme protocol, Mac OS 9, Tron and Steampunk
+  Themes/                Theme protocol, Retro, Tron and Steampunk
   Things.swift           Default card layout
   Views.swift            Classic layout
 ```

@@ -6,7 +6,7 @@ import SwiftUI
 // The classic layout is not themed.
 
 public enum ThemeType: String, CaseIterable, Identifiable {
-    case standard, steampunk, os9, tron
+    case standard, steampunk, retro, tron
 
     public var id: String { rawValue }
 
@@ -14,7 +14,7 @@ public enum ThemeType: String, CaseIterable, Identifiable {
         switch self {
         case .standard: return "Standard"
         case .steampunk: return "Steampunk"
-        case .os9: return "Mac OS 9"
+        case .retro: return "Retro"
         case .tron: return "Tron"
         }
     }
@@ -23,7 +23,7 @@ public enum ThemeType: String, CaseIterable, Identifiable {
         switch self {
         case .standard: return StandardTheme()
         case .steampunk: return SteampunkTheme()
-        case .os9: return OS9Theme()
+        case .retro: return RetroTheme()
         case .tron: return TronTheme()
         }
     }
@@ -33,7 +33,7 @@ public enum ThemeType: String, CaseIterable, Identifiable {
         switch self {
         case .standard: return []
         case .steampunk: return ["Baskerville", "Georgia"]
-        case .os9: return ["CharcoalCY", "Geneva"]
+        case .retro: return ["CharcoalCY", "Geneva"]
         case .tron: return ["Orbitron", "AvenirNextCondensed-DemiBold", "DINCondensed-Bold"]
         }
     }
@@ -41,7 +41,7 @@ public enum ThemeType: String, CaseIterable, Identifiable {
     var colorScheme: ColorScheme? {
         switch self {
         case .standard: return nil
-        case .os9: return .light
+        case .retro: return .light
         case .steampunk, .tron: return .dark
         }
     }
