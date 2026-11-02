@@ -25,6 +25,7 @@ public struct RetroAppleTheme: DashboardTheme {
                 // Thick 2px border mimicking early Mac OS window frames
                 .border(colors.border, width: 2) 
                 // Hard, 0-radius drop shadow to simulate early 3D window layering
+                .compositingGroup()
                 .shadow(color: colors.border, radius: 0, x: 3, y: 3)
         )
     }
@@ -38,6 +39,7 @@ public struct RetroAppleTheme: DashboardTheme {
                 .foregroundColor(colors.foreground)
                 .border(colors.border, width: 2)
                 // 3D pop effect for buttons
+                .compositingGroup()
                 .shadow(color: colors.border, radius: 0, x: 2, y: 2) 
         )
     }

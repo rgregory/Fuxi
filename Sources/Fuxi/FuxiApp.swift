@@ -159,6 +159,8 @@ struct SeverityBadge: View {
     var body: some View {
         Text(severity.label)
             .font(.caption.weight(.semibold))
+            .lineLimit(1)
+            .fixedSize()
             .padding(.horizontal, 8)
             .padding(.vertical, 2)
             .foregroundStyle(severity.color)

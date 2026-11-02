@@ -69,6 +69,7 @@ public struct SteampunkTheme: DashboardTheme {
                             lineWidth: 2
                         )
                 )
+                .compositingGroup()
                 .shadow(color: .black.opacity(0.9), radius: 8, x: 0, y: 6)
         )
     }
@@ -98,6 +99,7 @@ public struct SteampunkTheme: DashboardTheme {
                         )
                 )
                 .cornerRadius(20)
+                .compositingGroup()
                 .shadow(color: .black.opacity(0.7), radius: 3, x: 0, y: 3)
         )
     }
