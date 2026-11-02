@@ -6,6 +6,8 @@ It is written for a developer Mac on Apple silicon: one that runs containers, VM
 
 ![Fuxi Overview: system facts, kernel limits and security posture](docs/overview.png)
 
+![Fuxi Findings: recommended changes grouped by severity, with current and target values](docs/findings.png)
+
 - [Requirements](#requirements)
 - [Build and install](#build-and-install)
 - [The five screens](#the-five-screens)
