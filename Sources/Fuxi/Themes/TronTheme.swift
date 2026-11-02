@@ -25,7 +25,7 @@ public struct TronTheme: DashboardTheme {
         let shape = Chamfered(cut: 12)
         return AnyView(
             view
-                .padding(14)
+                .padding(10)
                 .background(
                     ZStack {
                         shape.fill(colors.panelBackground)

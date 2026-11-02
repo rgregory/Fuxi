@@ -18,6 +18,8 @@ public struct OS9Theme: DashboardTheme {
     public let fontName = "Charcoal"
 
     public var barColor: Color { Color(red: 0.40, green: 0.40, blue: 0.80) }  // #6666CC progress fill
+    /// Geneva is wide; three columns would truncate.
+    public var postureColumns: Int { 2 }
 
     public func applyPanelStyle(to view: AnyView) -> AnyView {
         AnyView(

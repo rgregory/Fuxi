@@ -70,11 +70,14 @@ public protocol DashboardTheme {
     var barColor: Color { get }
     /// Wraps a section's title row and rule.
     func applySectionHeader(to view: AnyView) -> AnyView
+    /// Columns for the security posture list on the Overview. Wide fonts need fewer.
+    var postureColumns: Int { get }
 }
 
 public extension DashboardTheme {
     var barColor: Color { colors.foreground }
     func applySectionHeader(to view: AnyView) -> AnyView { view }
+    var postureColumns: Int { 3 }
 }
 
 /// The system look: unchanged from before themes existed.

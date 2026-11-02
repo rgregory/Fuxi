@@ -326,7 +326,7 @@ struct ThingsOverview: View {
         ForEach(levels) { s in
             HStack(spacing: 5) {
                 SeverityBadge(severity: s)
-                Text("\(model.count(s))").font(Fx.style(.headline).monospacedDigit())
+                Text("\(model.count(s))").font(Fx.style(.headline).monospacedDigit()).fixedSize()
             }
         }
     }
@@ -341,7 +341,7 @@ struct ThingsOverview: View {
 
     var body: some View {
         // Overview is wider than other pages so System and Kernel limits sit side by side.
-        ThingsScroll(maxWidth: 1080, spacing: 18) {
+        ThingsScroll(maxWidth: 1080, spacing: 14) {
             ThingsHeader(pane: .overview, subtitle: subtitle)
 
             HStack(alignment: .top, spacing: 24) {
@@ -354,7 +354,8 @@ struct ThingsOverview: View {
                                 ForEach(model.facts) { f in
                                     VStack(alignment: .leading, spacing: 1) {
                                         Text(f.label.uppercased()).font(Fx.style(.caption2)).foregroundStyle(.secondary)
-                                        Text(f.value).font(.system(.callout, design: .monospaced))
+                                        Text(f.value)
+                                            .font(Fx.isStandard ? .system(.callout, design: .monospaced) : Fx.style(.callout).monospacedDigit())
                                             .lineLimit(2).minimumScaleFactor(0.8)
                                             .fixedSize(horizontal: false, vertical: true)
                                             .textSelection(.enabled)
@@ -403,7 +404,7 @@ struct ThingsOverview: View {
             if !model.posture.isEmpty {
                 let good = model.posture.filter { $0.status == .good }.count
                 // Two columns in themes: their fonts are wider and their panels pad more.
-                let columns = Fx.isStandard ? 3 : 2
+                let columns = Fx.isStandard ? 3 : Fx.theme.postureColumns
                 let per = (model.posture.count + columns - 1) / columns
                 let cols: [[PostureItem]] = stride(from: 0, to: model.posture.count, by: max(per, 1)).map {
                     Array(model.posture[$0..<min($0 + per, model.posture.count)])
@@ -442,7 +443,7 @@ struct ThingsGaugeRow: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(.vertical, 7)
+        .padding(.vertical, Fx.isStandard ? 7 : 4)
         .help(gauge.note ?? gauge.name)
     }
 }
@@ -460,7 +461,7 @@ struct ThingsPostureRow: View {
                 .foregroundStyle(item.status == .attention ? Color.orange : Fx.muted)
                 .lineLimit(1).truncationMode(.middle)
         }
-        .padding(.vertical, 5)
+        .padding(.vertical, Fx.isStandard ? 5 : 3)
         .contentShape(Rectangle())
         .help(item.detail)
     }
