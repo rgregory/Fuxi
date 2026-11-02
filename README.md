@@ -84,6 +84,8 @@ The default layout uses cards and sections. **View › Classic Layout** (⇧⌘L
 
 **View › Theme** restyles the default layout. Retro is the default, and **⇧⌘T** flips between Retro and Tron:
 
+![Retro theme reference: white panels, black borders, hard shadows](docs/retro-reference.png)
+
 | Theme | Look |
 |---|---|
 | Standard | The macOS system look |
