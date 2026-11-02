@@ -51,6 +51,7 @@ final class AppModel: ObservableObject {
     @Published private(set) var pendingBootArgs: String?
     @Published private(set) var xprotect: XProtectStatus?
     @Published private(set) var installedConfig: String?
+    @Published private(set) var processCount: Int?
 
     private var didSeedSelection = false
     /// Writes in a script the user has saved but Fuxi hasn't yet seen take effect, by key.
@@ -194,11 +195,37 @@ final class AppModel: ObservableObject {
         return out
     }
 
-    /// Days since boot, for the restart reminder.
-    var uptimeDays: Int? {
+    private var uptimeSeconds: Double? {
         guard let boot = snapshot["kern.boottime"], let sec = firstCapture("sec = (\\d+)", in: boot),
               let t = Double(sec) else { return nil }
-        return Int((Date().timeIntervalSince1970 - t) / 86_400)
+        return Date().timeIntervalSince1970 - t
+    }
+
+    /// Days since boot, for the restart reminder.
+    var uptimeDays: Int? { uptimeSeconds.map { Int($0 / 86_400) } }
+
+    /// Why the previous boot ended, when it wasn't clean. nil for a normal or unrecognised reason.
+    var abnormalShutdown: String? {
+        guard let r = snapshot["kern.shutdownreason"]?.lowercased() else { return nil }
+        if r.contains("panic") { return "Last restart followed a kernel panic." }
+        if r.contains("wdog") { return "Last restart followed a watchdog reset: the Mac stopped responding." }
+        return nil
+    }
+
+    /// Vnodes recycled per hour since boot, rounded to hundreds.
+    private var vnodeRecyclesPerHour: Int? {
+        guard let n = snapshot.int("kern.num_recycledvnodes"), let up = uptimeSeconds, up > 3600 else { return nil }
+        return Int((Double(n) / (up / 3600) / 100).rounded()) * 100
+    }
+
+    /// "Compressor holds 18.9 GiB in 8.6 GiB (2.2 : 1)."
+    private var compressorNote: String? {
+        guard let pages = snapshot.int("vm.compressor.pages_compressed"), pages > 0,
+              let used = snapshot.int("vm.compressor_bytes_used"), used > 0 else { return nil }
+        let page = snapshot.int("hw.pagesize") ?? 16_384
+        let held = Double(pages * page) / 1_073_741_824
+        let stored = Double(used) / 1_073_741_824
+        return String(format: "Compressor holds %.1f GiB in %.1f GiB (%.1f : 1).", held, stored, held / stored)
     }
 
     var hostname: String { snapshot["kern.hostname"] ?? "This Mac" }
@@ -256,14 +283,22 @@ final class AppModel: ObservableObject {
         if let i = out.firstIndex(where: { $0.name == "Vnode cache" }) {
             out[i].warnAt = 101
             if out[i].percent >= 99 {
-                out[i].note = "Full by design: macOS fills this cache and recycles entries. Raise it only for very large source trees or container images (see “Enlarge the vnode cache”)."
+                if let rate = vnodeRecyclesPerHour {
+                    out[i].note = "Full by design. Recycling about \(rate.formatted()) an hour since boot; raise it only if that climbs (see “Enlarge the vnode cache”)."
+                } else {
+                    out[i].note = "Full by design: macOS fills this cache and recycles entries. Raise it only for very large source trees or container images (see “Enlarge the vnode cache”)."
+                }
             }
         }
         pair("Open files", "kern.num_files", "kern.maxfiles")
+        if let n = processCount, let limit = snapshot.int("kern.maxproc"), limit > 0 {
+            out.append(LimitGauge(name: "Processes", used: Double(n), limit: Double(limit),
+                                  caption: "\(n.formatted()) / \(limit.formatted())"))
+        }
         if let level = snapshot.int("kern.memorystatus_level"), (0...100).contains(level) {
             out.append(LimitGauge(name: "Memory in use", used: Double(100 - level), limit: 100,
                                   caption: "\(level)% available", warnAt: 85,
-                                  note: nil))
+                                  note: compressorNote))
         }
         if let swap = snapshot["vm.swapusage"],
            let total = firstCapture("total = ([0-9.]+)M", in: swap).flatMap(Double.init),
@@ -292,6 +327,7 @@ final class AppModel: ObservableObject {
             pendingBootArgs = await Task.detached(priority: .utility) { Sysctl.pendingBootArgs() }.value
             xprotect = await Task.detached(priority: .utility) { XProtectStatus.read() }.value
             installedConfig = BootConfig.installedText
+            processCount = await Task.detached(priority: .utility) { Sysctl.processCount() }.value
             awaitingScript = false
             reconcilePending()
             if !didSeedSelection {

@@ -353,6 +353,12 @@ struct ThingsOverview: View {
                                     .foregroundStyle(.orange)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
+                            if let shutdown = model.abnormalShutdown {
+                                Label(shutdown, systemImage: "exclamationmark.triangle")
+                                    .font(.callout)
+                                    .foregroundStyle(.orange)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
                         .frame(maxHeight: .infinity, alignment: .topLeading)
                     }

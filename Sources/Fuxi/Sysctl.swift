@@ -54,6 +54,19 @@ enum Sysctl {
             && value.unicodeScalars.allSatisfy { valueChars.contains($0) }
     }
 
+    /// Running processes, from the kernel's process table. No root needed.
+    static func processCount() -> Int? {
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_ALL]
+        var size = 0
+        guard sysctl(&mib, u_int(mib.count), nil, &size, nil, 0) == 0, size > 0 else { return nil }
+        let stride = MemoryLayout<kinfo_proc>.stride
+        // Leave room for processes started between the two calls.
+        var procs = [kinfo_proc](repeating: kinfo_proc(), count: size / stride + 32)
+        size = procs.count * stride
+        guard sysctl(&mib, u_int(mib.count), &procs, &size, nil, 0) == 0 else { return nil }
+        return size / stride
+    }
+
     static func readAll() throws -> [SysctlEntry] {
         parse(try run(path, ["-a"]))
     }

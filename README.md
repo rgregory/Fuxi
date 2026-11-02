@@ -54,7 +54,8 @@ Fuxi reads every key from `sysctl -a` when it opens. **Reload** (⌘R) reads the
 ### Overview
 
 - **Machine facts:** model, chip, core layout (for example 4 Performance + 6 Efficiency), memory and page size, macOS and Darwin versions, uptime, load average with load per core, memory pressure, and how many keys were read.
-- **Limits:** how close the kernel is to its ceilings for the vnode cache, open files, memory and swap. A full vnode cache is normal after long uptime; the gauge says so instead of raising an alarm.
+- **Limits:** how close the kernel is to its ceilings for the vnode cache, open files, processes, memory and swap. A full vnode cache is normal after long uptime, so that gauge shows how many entries are recycled per hour instead. The memory gauge shows the compressor's ratio, for example 18.9 GiB held in 8.6 GiB (2.2 : 1).
+- **Last restart:** a warning when the previous boot ended in a kernel panic or a watchdog reset (the Mac stopped responding), read from `kern.shutdownreason`.
 - **Security posture:** read-only state that `sysctl` reports but can't change. It covers Gatekeeper, quarantine, XProtect (signature version and age, Remediator, automatic security updates), launch constraints, kill on bad signature, App Management, mandatory access checks on every kernel object type, the code-signing monitor, engineering trust caches, Apple QA certificates, security-research hardware, current and next-boot boot arguments, Developer Mode and Lockdown Mode. Each item has a one-line explanation.
 
 ### Findings
@@ -191,6 +192,7 @@ net.inet6.icmp6.rediraccept=0
 | Path | Access | Purpose |
 |---|---|---|
 | `/usr/sbin/sysctl -a` | read | Every kernel setting |
+| Kernel process table (`KERN_PROC_ALL`) | read | Number of running processes |
 | `nvram boot-args` | read | Boot arguments queued for the next restart |
 | `/private/var/protected/xprotect/XProtect.bundle`, `/Library/Apple/System/Library/CoreServices/XProtect.bundle` | read | XProtect signature version and date |
 | `/Library/Apple/System/Library/CoreServices/XProtect.app` | read | XProtect Remediator version |
