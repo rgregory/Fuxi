@@ -87,7 +87,7 @@ The default layout uses cards and sections. **View › Classic Layout** (⇧⌘L
 | Theme | Look |
 |---|---|
 | Standard | The macOS system look |
-| Retro | Mac OS 9 Platinum: grey, bevelled panels, pinstriped section headers, lavender-blue highlights, Charcoal (or Geneva) |
+| Retro | Off-white window, white panels with 2-px black borders and hard black drop shadows, square corners, monochrome, Chicago (or Geneva) |
 | Tron | Black grid, glowing cyan chamfered panels, uppercase glowing headings, Orbitron (or a condensed sans) |
 | Steampunk | Mahogany and brass, corner brackets, Hoefler Text |
 

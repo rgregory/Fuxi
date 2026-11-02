@@ -33,7 +33,7 @@ public enum ThemeType: String, CaseIterable, Identifiable {
         switch self {
         case .standard: return []
         case .steampunk: return ["Baskerville", "Georgia"]
-        case .retro: return ["CharcoalCY", "Geneva"]
+        case .retro: return ["ChicagoFLF", "Geneva"]
         case .tron: return ["Orbitron", "AvenirNextCondensed-DemiBold", "DINCondensed-Bold"]
         }
     }
