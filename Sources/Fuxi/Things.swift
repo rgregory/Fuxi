@@ -454,7 +454,7 @@ struct ThingsPostureRow: View {
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: icon).foregroundStyle(color).frame(width: 18)
-            Text(item.name).font(Fx.style(.callout)).lineLimit(1)
+            Text(item.name).font(Fx.style(.callout)).lineLimit(1).minimumScaleFactor(0.8)
             Spacer(minLength: 6)
             Text(item.value)
                 .font(Fx.style(.caption).monospaced())

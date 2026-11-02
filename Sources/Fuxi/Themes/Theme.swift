@@ -46,9 +46,9 @@ public enum ThemeType: String, CaseIterable, Identifiable {
         }
     }
 
-    /// The theme a build was packaged with (Info.plist key FuxiTheme), else Standard.
+    /// The theme a build was packaged with (Info.plist key FuxiTheme), else Retro.
     static var bundled: ThemeType {
-        (Bundle.main.object(forInfoDictionaryKey: "FuxiTheme") as? String).flatMap(ThemeType.init) ?? .standard
+        (Bundle.main.object(forInfoDictionaryKey: "FuxiTheme") as? String).flatMap(ThemeType.init) ?? .retro
     }
 }
 

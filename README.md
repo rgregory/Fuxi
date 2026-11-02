@@ -82,7 +82,7 @@ Every change with the time, the old value and the new value, and a **Revert…**
 
 The default layout uses cards and sections. **View › Classic Layout** (⇧⌘L) switches to a standard list layout. Both show the same data.
 
-**View › Theme** restyles the default layout:
+**View › Theme** restyles the default layout. Retro is the default:
 
 | Theme | Look |
 |---|---|
