@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import SwiftUI
 
@@ -52,10 +53,24 @@ final class AppModel: ObservableObject {
     @Published private(set) var installedConfig: String?
 
     private var didSeedSelection = false
+    /// Writes in a script the user has saved but Fuxi hasn't yet seen take effect, by key.
+    private var pending: [String: (old: String, value: String)] = [:]
+    /// True from saving a script until the next read, so returning to Fuxi reloads.
+    private var awaitingScript = false
+    private var activeObserver: NSObjectProtocol?
 
     init() {
         state = StateStore.load()
         Task { await refresh() }
+        // The user runs the script in Terminal, then switches back: read again so the result shows.
+        activeObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, self.awaitingScript else { return }
+                await self.refresh()
+            }
+        }
     }
 
     // MARK: Derived
@@ -277,6 +292,8 @@ final class AppModel: ObservableObject {
             pendingBootArgs = await Task.detached(priority: .utility) { Sysctl.pendingBootArgs() }.value
             xprotect = await Task.detached(priority: .utility) { XProtectStatus.read() }.value
             installedConfig = BootConfig.installedText
+            awaitingScript = false
+            reconcilePending()
             if !didSeedSelection {
                 didSeedSelection = true
                 selection = Set(findings.filter { $0.actionable && $0.rule.defaultSelected }.map(\.id))
@@ -287,68 +304,27 @@ final class AppModel: ObservableObject {
     }
 
     // MARK: Writing
+    //
+    // Fuxi never runs anything as root. Every change is exported as a shell script that
+    // the user reads and runs with sudo; the next read records what actually changed.
 
     func apply(_ writes: [KernelWrite]) async {
-        guard !writes.isEmpty, !isApplying else { return }
+        guard !writes.isEmpty else { return }
         for w in writes where !(Sysctl.isValidKey(w.key) && Sysctl.isValidValue(w.value)) {
             alert = AlertItem(title: "Value not allowed",
-                              message: "\(w.key) = \(w.value) contains characters Fuxi won't pass to a root shell. Use letters, digits, '.', '_', '-', ':' and ','.")
+                              message: "\(w.key) = \(w.value) contains characters Fuxi won't write into a script run as root. Use letters, digits, '.', '_', '-', ':' and ','.")
             return
         }
-        isApplying = true
-        defer { isApplying = false }
-
-        let command = writes
-            .map { "\(Sysctl.path) -w \($0.key)=\($0.value) >/dev/null 2>&1 || echo \($0.key)" }
-            .joined(separator: "; ")
-        let before = snapshot.map
-        let prompt = writes.count == 1
-            ? "Fuxi wants to set \(writes[0].key) to \(writes[0].value)."
-            : "Fuxi wants to change \(writes.count) kernel settings."
-
-        let output: String
-        do {
-            output = try await Privileged.run(command, prompt: prompt)
-        } catch FuxiError.cancelled {
-            return
-        } catch {
-            alert = AlertItem(title: "Not applied", message: error.localizedDescription)
-            return
+        let script = ScriptExport.applyScript(writes, current: snapshot.map, host: hostname)
+        guard let url = ScriptExport.save(script, suggestedName: "fuxi-apply.sh",
+                                          message: "Save a script that changes \(writes.count) kernel setting(s). Run it with sudo.")
+        else { return }
+        for w in writes {
+            pending[w.key] = (old: snapshot[w.key] ?? "", value: w.value)
         }
-
-        let failed = Set(output.components(separatedBy: .newlines)
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty })
-
-        await refresh()
-
-        var changed: [String] = []
-        for w in writes where !failed.contains(w.key) {
-            let old = before[w.key] ?? ""
-            let now = snapshot[w.key] ?? w.value
-            guard old != now else { continue }
-            state.history.insert(SettingChange(date: Date(), key: w.key, oldValue: old, newValue: now), at: 0)
-            if now == state.baseline[w.key] {
-                state.managed.removeValue(forKey: w.key)
-            } else {
-                state.managed[w.key] = w.value
-            }
-            changed.append(w.key)
-        }
-        StateStore.save(state)
-        let changedSet = Set(changed)
-        selection = selection.filter { id in
-            guard let rule = Catalog.rules.first(where: { $0.id == id }) else { return false }
-            return !changedSet.contains(rule.key)
-        }
-
-        let unchanged = writes.filter { !failed.contains($0.key) && !changedSet.contains($0.key) }.map(\.key)
-        var lines: [String] = []
-        if !changed.isEmpty { lines.append("Changed: \(changed.joined(separator: ", ")).") }
-        if !failed.isEmpty { lines.append("Rejected by the kernel: \(failed.sorted().joined(separator: ", ")). The key may be read-only or the value out of range.") }
-        if !unchanged.isEmpty { lines.append("No change: \(unchanged.joined(separator: ", ")).") }
-        if !changed.isEmpty { lines.append("These reset at restart unless you install them at boot.") }
-        alert = AlertItem(title: failed.isEmpty ? "Applied" : "Partly applied", message: lines.joined(separator: "\n\n"))
+        awaitingScript = true
+        alert = AlertItem(title: "Script saved",
+                          message: ScriptExport.instructions(for: url) + "\n\nChanges made this way reset at restart unless you install them at boot.")
     }
 
     func restoreDefault(_ key: String) async {
@@ -358,6 +334,35 @@ final class AppModel: ObservableObject {
 
     func revert(_ change: SettingChange) async {
         await apply([(key: change.key, value: change.oldValue)])
+    }
+
+    /// Records writes from a saved script once the kernel shows them.
+    private func reconcilePending() {
+        guard !pending.isEmpty else { return }
+        var changed: [String] = []
+        for (key, p) in pending {
+            guard let now = snapshot[key], now != p.old else { continue }
+            state.history.insert(SettingChange(date: Date(), key: key, oldValue: p.old, newValue: now), at: 0)
+            if now == state.baseline[key] {
+                state.managed.removeValue(forKey: key)
+            } else {
+                state.managed[key] = p.value
+            }
+            pending.removeValue(forKey: key)
+            changed.append(key)
+        }
+        guard !changed.isEmpty else { return }
+        StateStore.save(state)
+        let changedSet = Set(changed)
+        selection = selection.filter { id in
+            guard let rule = Catalog.rules.first(where: { $0.id == id }) else { return false }
+            return !changedSet.contains(rule.key)
+        }
+        var lines = ["Changed: \(changed.sorted().joined(separator: ", "))."]
+        if !pending.isEmpty {
+            lines.append("Not changed yet: \(pending.keys.sorted().joined(separator: ", ")). If the script reported them as rejected, the key is read-only or the value is out of range.")
+        }
+        alert = AlertItem(title: "Applied", message: lines.joined(separator: "\n\n"))
     }
 
     func stopManaging(_ key: String) {
@@ -373,27 +378,22 @@ final class AppModel: ObservableObject {
     // MARK: At boot
 
     func installBootConfig() async {
-        do {
-            let command = try BootConfig.prepareInstall(managed: state.managed)
-            _ = try await Privileged.run(command, prompt: "Fuxi wants to save \(state.managed.count) kernel setting(s) to \(BootConfig.path) so they apply at startup.")
-            await refresh()
-            alert = AlertItem(title: "Saved for boot", message: "macOS reads \(BootConfig.path) at startup. Restart, then check this list: macOS resets a few keys after startup, and those need setting again.")
-        } catch FuxiError.cancelled {
-            return
-        } catch {
-            alert = AlertItem(title: "Not installed", message: error.localizedDescription)
-        }
+        let script = ScriptExport.installBootScript(BootConfig.text(for: state.managed), host: hostname)
+        guard let url = ScriptExport.save(script, suggestedName: "fuxi-boot-install.sh",
+                                          message: "Save a script that writes \(state.managed.count) setting(s) to \(BootConfig.path). Run it with sudo.")
+        else { return }
+        awaitingScript = true
+        alert = AlertItem(title: "Script saved",
+                          message: ScriptExport.instructions(for: url) + "\n\nmacOS reads \(BootConfig.path) at startup. After a restart, check this list: macOS resets a few keys after startup, and those need setting again.")
     }
 
     func removeBootConfig() async {
-        do {
-            _ = try await Privileged.run(BootConfig.removeCommand, prompt: "Fuxi wants to remove its settings from \(BootConfig.path).")
-            await refresh()
-            alert = AlertItem(title: "Removed", message: "Settings return to macOS defaults at the next restart. Any sysctl.conf you had before Fuxi was put back.")
-        } catch FuxiError.cancelled {
-            return
-        } catch {
-            alert = AlertItem(title: "Not removed", message: error.localizedDescription)
-        }
+        let script = ScriptExport.removeBootScript(host: hostname)
+        guard let url = ScriptExport.save(script, suggestedName: "fuxi-boot-remove.sh",
+                                          message: "Save a script that removes Fuxi's \(BootConfig.path). Run it with sudo.")
+        else { return }
+        awaitingScript = true
+        alert = AlertItem(title: "Script saved",
+                          message: ScriptExport.instructions(for: url) + "\n\nSettings return to macOS defaults at the next restart. Any sysctl.conf you had before Fuxi is put back.")
     }
 }

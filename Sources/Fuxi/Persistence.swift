@@ -43,6 +43,7 @@ enum StateStore {
 
 /// Boot-time persistence through /etc/sysctl.conf, which macOS reads at startup.
 /// macOS services reset a few keys after startup, so a restart is the real test.
+/// Fuxi only reads this file; ScriptExport builds the scripts that write it.
 enum BootConfig {
     static let path = "/etc/sysctl.conf"
     static let backupPath = "/etc/sysctl.conf.fuxi-backup"
@@ -62,21 +63,4 @@ enum BootConfig {
 
     /// True only when the file exists and Fuxi wrote it.
     static var isInstalled: Bool { installedText?.hasPrefix(header) ?? false }
-
-    /// Writes a staging file and returns the root command that installs it. A sysctl.conf
-    /// that Fuxi didn't write is copied to the backup path first, once.
-    static func prepareInstall(managed: [String: String]) throws -> String {
-        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("fuxi-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let fileURL = dir.appendingPathComponent("sysctl.conf")
-        try text(for: managed).write(to: fileURL, atomically: true, encoding: .utf8)
-        return [
-            "if [ -f \(path) ] && [ ! -f \(backupPath) ] && ! /usr/bin/head -1 \(path) | /usr/bin/grep -qF 'Managed by Fuxi'; then /bin/cp -p \(path) \(backupPath); fi",
-            "/usr/bin/install -m 644 -o root -g wheel '\(fileURL.path)' \(path)",
-            "/bin/rm -rf '\(dir.path)'",
-        ].joined(separator: " && ")
-    }
-
-    /// Puts back the file Fuxi replaced, or deletes Fuxi's file if there was none.
-    static let removeCommand = "if [ -f \(backupPath) ]; then /bin/mv \(backupPath) \(path); else /bin/rm -f \(path); fi"
 }

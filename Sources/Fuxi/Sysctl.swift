@@ -28,15 +28,11 @@ struct Snapshot {
 enum FuxiError: LocalizedError {
     case launchFailed(String)
     case notAllowed(String)
-    case cancelled
-    case authorization(String)
 
     var errorDescription: String? {
         switch self {
         case .launchFailed(let m): return "Could not run sysctl: \(m)"
         case .notAllowed(let m): return m
-        case .cancelled: return "Authorization was cancelled."
-        case .authorization(let m): return m
         }
     }
 }
@@ -123,40 +119,6 @@ enum Sysctl {
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
         return String(decoding: data, as: UTF8.self)
-    }
-}
-
-/// Runs a shell command as root after the standard macOS administrator prompt.
-/// osascript runs off the main thread so the window stays responsive while the prompt is open.
-enum Privileged {
-    static func run(_ command: String, prompt: String) async throws -> String {
-        func escape(_ s: String) -> String {
-            s.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
-        }
-        let source = "do shell script \"\(escape(command))\" with prompt \"\(escape(prompt))\" with administrator privileges"
-        return try await Task.detached(priority: .userInitiated) { () throws -> String in
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-            process.arguments = ["-e", source]
-            let out = Pipe()
-            let err = Pipe()
-            process.standardOutput = out
-            process.standardError = err
-            do {
-                try process.run()
-            } catch {
-                throw FuxiError.launchFailed(error.localizedDescription)
-            }
-            let outData = out.fileHandleForReading.readDataToEndOfFile()
-            let errData = err.fileHandleForReading.readDataToEndOfFile()
-            process.waitUntilExit()
-            let stderr = String(decoding: errData, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
-            if process.terminationStatus != 0 {
-                if stderr.contains("-128") { throw FuxiError.cancelled }
-                throw FuxiError.authorization(stderr.isEmpty ? "Authorization failed." : stderr)
-            }
-            return String(decoding: outData, as: UTF8.self)
-        }.value
     }
 }
 

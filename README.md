@@ -1,6 +1,6 @@
 # Fuxi
 
-Fuxi is a native macOS app that reviews the kernel's `sysctl` settings for security and performance. It explains each finding in plain language, applies the changes you pick after an administrator prompt, records every change so you can revert it, and can keep your changes across restarts with `/etc/sysctl.conf`.
+Fuxi is a native macOS app that reviews the kernel's `sysctl` settings for security and performance. It explains each finding in plain language and turns the changes you pick into a short shell script that you read and run with `sudo`. Fuxi itself never runs anything as root. It records every change so you can revert it, and can export a script that keeps your changes across restarts with `/etc/sysctl.conf`.
 
 It is written for a developer Mac on Apple silicon: one that runs containers, VMs, VPN tunnels and local language models. The recommendations assume that. Read each finding's explanation before applying it to a different kind of machine.
 
@@ -24,7 +24,7 @@ It is written for a developer Mac on Apple silicon: one that runs containers, VM
 
 - macOS 14 Sonoma or later
 - Xcode command-line tools (`xcode-select --install`), or full Xcode
-- An administrator account, only for applying changes. Reviewing needs no special rights.
+- An administrator account to run the exported scripts with `sudo`. Reviewing needs no special rights.
 
 ## Build and install
 
@@ -59,15 +59,15 @@ Fuxi reads every key from `sysctl -a` when it opens. **Reload** (⌘R) reads the
 
 Each check shows the key, its current value, the value Fuxi recommends, a severity and why it matters. Checks that could break something you use carry a caution and start unselected.
 
-Select several and choose **Apply Selected…** to make them all behind one administrator prompt, or use **Apply…** on a single finding. The sidebar badge counts findings that still need action.
+Select several and choose **Apply Selected…** to export them as one script, or use **Apply…** on a single finding. The sidebar badge counts findings that still need action.
 
 ### All Keys
 
-Every key from `sysctl -a`, searchable by key or value and filterable by namespace. **Reviewed keys only** narrows the list to the keys Fuxi checks. Double-click a row, or right-click › **Set Value…**, to change any writable key. The kernel rejects keys that are read-only or values out of range, and Fuxi reports which.
+Every key from `sysctl -a`, searchable by key or value and filterable by namespace. **Reviewed keys only** narrows the list to the keys Fuxi checks. Double-click a row, or right-click › **Set Value…**, to change any writable key. The kernel rejects keys that are read-only or values out of range; the script prints which.
 
 ### At Boot
 
-Every value Fuxi has changed from its macOS default, with the `sysctl.conf` Fuxi would write. **Install at Boot…** saves them, **Update…** rewrites the file after further changes, and **Remove…** takes them out. A green check means the installed file matches; orange means you've changed settings since installing. See [Keeping changes at boot](#keeping-changes-at-boot).
+Every value Fuxi has changed from its macOS default, with the `sysctl.conf` Fuxi would write. **Install at Boot…** exports a script that writes them, **Update…** exports one that rewrites the file after further changes, and **Remove…** exports one that takes them out. A green check means the installed file matches; orange means you've changed settings since installing. See [Keeping changes at boot](#keeping-changes-at-boot).
 
 Each row can **Restore Default…** (write the macOS value back) or **Stop Keeping** (leave the current value but drop it from the boot file).
 
@@ -131,19 +131,45 @@ These report a state but never write anything:
 
 ## How changes are applied
 
-1. Fuxi checks every key and value against a narrow character set: letters, digits and `. _ - :` (plus `,` in values), at most 128 characters, never starting with `-`. Anything else is refused before it reaches a shell.
-2. It builds one command that runs `/usr/sbin/sysctl -w key=value` for each change and prints the key of any write the kernel rejects.
-3. It runs that command through the standard macOS administrator prompt (`osascript … with administrator privileges`). The prompt names the setting, or the number of settings.
-4. It reads all keys again and reports what changed, what the kernel rejected and what was already set.
-5. Each real change goes into History. Values that differ from the macOS default are added to the boot list; a value set back to its default is removed from it.
+Fuxi never asks for your password and never runs anything as root. Every change goes through a script you can read before you run it.
 
-Changes made with `sysctl -w` take effect immediately and last until the next restart.
+1. Fuxi checks every key and value against a narrow character set: letters, digits and `. _ - :` (plus `,` in values), at most 128 characters, never starting with `-`. Anything else is refused before it goes into a script.
+2. It asks where to save the script (Downloads by default) and writes it there.
+3. It copies the command to run to the clipboard, for example `sudo sh ~/Downloads/fuxi-apply.sh`.
+4. You read the script and run it in Terminal. It refuses to run without `sudo`, and prints each change and any key the kernel rejects.
+5. When you switch back to Fuxi it reads the kernel again and records what actually changed in History. Values that differ from the macOS default join the boot list; a value set back to its default leaves it.
+
+An apply script looks like this:
+
+```sh
+#!/bin/sh
+# Generated by Fuxi on 2026-11-02T22:30:00Z for my-mac.local.
+# Changes 2 kernel setting(s). They last until the next restart.
+# Read it first, then run:  sudo sh fuxi-apply.sh
+
+if [ "$(id -u)" -ne 0 ]; then
+  echo "Run this with sudo: sudo sh \"$0\"" >&2
+  exit 1
+fi
+
+status=0
+
+# kern.ipc.somaxconn: 128 -> 1024
+/usr/sbin/sysctl -w kern.ipc.somaxconn=1024 || { echo "Rejected: kern.ipc.somaxconn" >&2; status=1; }
+
+# net.inet6.icmp6.rediraccept: 1 -> 0
+/usr/sbin/sysctl -w net.inet6.icmp6.rediraccept=0 || { echo "Rejected: net.inet6.icmp6.rediraccept" >&2; status=1; }
+
+exit $status
+```
+
+Changes made with `sysctl -w` take effect immediately and last until the next restart. A saved script can be run again later, or on another Mac.
 
 On first launch Fuxi saves every current value as the macOS default. That snapshot is what **Restore Default…** writes back. If you had already changed settings before the first launch, those values become the "defaults"; delete the state file (see [below](#files-fuxi-reads-and-writes)) after a clean restart to take a new snapshot.
 
 ## Keeping changes at boot
 
-**Install at Boot…** writes the boot list to `/etc/sysctl.conf`, which macOS reads at startup:
+**Install at Boot…** exports `fuxi-boot-install.sh`. Run with `sudo`, it writes the boot list to `/etc/sysctl.conf`, which macOS reads at startup:
 
 ```
 # Managed by Fuxi. Changes made here are overwritten.
@@ -153,9 +179,9 @@ kern.maxvnodes=524288
 net.inet6.icmp6.rediraccept=0
 ```
 
-- **An existing file is backed up first.** If `/etc/sysctl.conf` exists and Fuxi didn't write it, it's copied once to `/etc/sysctl.conf.fuxi-backup`. Later updates don't touch the backup.
+- **An existing file is backed up first.** If `/etc/sysctl.conf` exists and Fuxi didn't write it, the script copies it once to `/etc/sysctl.conf.fuxi-backup`. Later updates don't touch the backup.
 - **Fuxi owns the whole file.** Lines you add by hand are overwritten on the next update. Set extra keys through Fuxi instead, from All Keys.
-- **Remove…** puts the backup back, or deletes Fuxi's file if there was no backup.
+- **Remove…** exports `fuxi-boot-remove.sh`, which puts the backup back, or deletes Fuxi's file if there was no backup. It refuses to touch a `sysctl.conf` that Fuxi didn't write.
 - **Restart, then check At Boot.** macOS applies `sysctl.conf` early in startup, but some services set their own keys afterwards. The forwarding keys are the common case: vmnet turns forwarding back on whenever a container or VM network starts. A key that shows its old value after a restart is owned by such a service, and no boot file will hold it.
 
 ## Files Fuxi reads and writes
@@ -168,17 +194,20 @@ net.inet6.icmp6.rediraccept=0
 | `/Library/Apple/System/Library/CoreServices/XProtect.app` | read | XProtect Remediator version |
 | `/Library/Preferences/com.apple.SoftwareUpdate.plist` | read | Whether security updates install automatically |
 | `~/Library/Application Support/Fuxi/state.json` | read/write | Default snapshot, change history and boot list |
-| `/etc/sysctl.conf` | write, as root | Boot persistence, only when you install it |
-| `/etc/sysctl.conf.fuxi-backup` | write, as root | Your original `sysctl.conf`, if you had one |
+| `/etc/sysctl.conf` | read | Whether the boot file is installed and current |
+| Scripts you save (`fuxi-apply.sh`, `fuxi-boot-install.sh`, `fuxi-boot-remove.sh`) | write | Changes for you to run with `sudo` |
 
-Nothing else is written. Fuxi makes no network connections.
+Fuxi writes nothing as root. Only the scripts you run touch `/etc/sysctl.conf` and `/etc/sysctl.conf.fuxi-backup`.
+
+Fuxi makes no network connections.
 
 ## Security model
 
-- **No stored credentials.** Every root action goes through the system administrator prompt. Fuxi never sees or keeps your password.
-- **No privileged helper.** Nothing runs as root except the single command you just approved. There is no background process, launch daemon or login item.
-- **Input restricted before the root shell.** Keys and values are checked against the character set above, so a crafted value can't add shell syntax.
-- **Read-only security checks.** Gatekeeper, XProtect, code signing, boot arguments and the other posture items are reported only. Fuxi can't and doesn't change them.
+- **No root, ever.** Fuxi runs as you. It has no privileged helper, launch daemon, login item or background process, and never shows a password prompt.
+- **You run every change.** Each change is a plain shell script saved where you choose. Read it, keep it, run it with `sudo`, or don't. Nothing changes until you do.
+- **Input restricted before it goes into a script.** Keys and values are checked against the character set above, so a crafted value can't add shell syntax. Current values copied into comments are kept to one line.
+- **Scripts check for root.** Each one exits with a message unless it's run with `sudo`, and the boot-remove script won't touch a `sysctl.conf` that Fuxi didn't write.
+- **Read-only security checks.** Gatekeeper, XProtect, code signing, boot arguments and the other posture items are reported only.
 - **Ad hoc signing.** `build-app.sh` signs the app for the Mac that built it. It isn't notarized or distributed.
 
 ## Caveats
@@ -187,7 +216,7 @@ Nothing else is written. Fuxi makes no network connections.
 - **Keys change between macOS releases.** Keys appear, disappear and change meaning. A check whose key is missing shows as Info with no value. Review findings after each major upgrade.
 - **Some keys are read-only.** The kernel rejects writes to them, and Fuxi reports the rejection.
 - **Forwarding is managed by macOS.** Turning it off breaks container, VM and Internet Sharing networking until something turns it on again, which vmnet does on its own.
-- **Kernel settings can affect stability.** Fuxi limits itself to `sysctl` and never touches SIP, Gatekeeper, code signing or boot security. If a change causes trouble, use **Revert…** in History, or restart: changes not saved at boot are gone after a restart.
+- **Kernel settings can affect stability.** Fuxi limits itself to `sysctl` and never touches SIP, Gatekeeper, code signing or boot security. If a change causes trouble, use **Revert…** in History to export a script that puts the old value back, or restart: changes not saved at boot are gone after a restart.
 
 ## Project layout
 
@@ -197,10 +226,11 @@ build-app.sh             Release build, .app bundle and ad hoc signature
 Support/                 Info.plist and app icon
 Sources/Fuxi/
   FuxiApp.swift          App entry, menu commands, sidebar and shared views
-  AppModel.swift         State: snapshot, findings, posture, gauges, apply, boot install
+  AppModel.swift         State: snapshot, findings, posture, gauges, exports, history
   Rules.swift            The check catalog and how findings are evaluated
-  Sysctl.swift           Reading and parsing sysctl -a, input validation, admin prompt
-  Persistence.swift      state.json and /etc/sysctl.conf
+  Sysctl.swift           Reading and parsing sysctl -a, input validation
+  ScriptExport.swift     The apply and boot scripts, save panel, clipboard command
+  Persistence.swift      state.json and reading /etc/sysctl.conf
   XProtect.swift         XProtect and Software Update state
   Things.swift           Default card layout
   Views.swift            Classic layout
@@ -232,7 +262,7 @@ Pass `selected: false` and a `caution:` for any change that can break something 
 
 ## Remove everything
 
-Use **At Boot › Remove…** first if you installed at boot. Or by hand:
+Use **At Boot › Remove…** and run its script first if you installed at boot. Or by hand:
 
 ```sh
 sudo rm -f /etc/sysctl.conf

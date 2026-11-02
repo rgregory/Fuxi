@@ -385,7 +385,7 @@ struct SetValueSheet: View {
             TextField("New value", text: $field.text)
                 .textFieldStyle(.roundedBorder)
                 .font(mono)
-            Text("You'll be asked for an administrator password. Many keys are read-only and the kernel will reject them. Values may use letters, digits, '.', '_', '-', ':' and ','.")
+            Text("Fuxi saves a script for you to run with sudo. Many keys are read-only and the kernel will reject them. Values may use letters, digits, '.', '_', '-', ':' and ','.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
