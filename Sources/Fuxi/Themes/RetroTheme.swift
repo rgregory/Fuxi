@@ -35,9 +35,9 @@ public struct RetroTheme: DashboardTheme {
             view
                 .padding(.horizontal, 16)
                 .padding(.vertical, 6)
-                .background(colors.panelBackground)
                 .foregroundColor(colors.foreground)
-                .border(colors.border, width: 2)
+                .background(RoundedRectangle(cornerRadius: 5).fill(colors.panelBackground))
+                .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(colors.border, lineWidth: 2))
                 .compositingGroup()
                 .shadow(color: colors.border, radius: 0, x: 2, y: 2)
         )
