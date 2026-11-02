@@ -41,6 +41,11 @@ struct FuxiApp: App {
                 Picker("Theme", selection: Binding(get: { themeType.rawValue }, set: { themeChoice = $0 })) {
                     ForEach(ThemeType.allCases) { Text($0.title).tag($0.rawValue) }
                 }
+                // ⇧⌘T flips between the two favourites.
+                Button(themeType == .tron ? "Switch to Retro" : "Switch to Tron") {
+                    themeChoice = (themeType == .tron ? ThemeType.retro : .tron).rawValue
+                }
+                .keyboardShortcut("t", modifiers: [.command, .shift])
             }
         }
     }
