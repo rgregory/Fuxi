@@ -1,18 +1,41 @@
 #!/bin/bash
 # Builds Fuxi.app into ./build and signs it ad hoc for local use.
+# Theme names package extra copies with that theme as their default:
+#   ./build-app.sh steampunk retroApple ibmTerminal
 set -euo pipefail
 cd "$(dirname "$0")"
 
 swift build -c release
+BIN="$(swift build -c release --show-bin-path)/Fuxi"
 
-APP="build/Fuxi.app"
-rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$(swift build -c release --show-bin-path)/Fuxi" "$APP/Contents/MacOS/Fuxi"
-cp Support/Info.plist "$APP/Contents/Info.plist"
-cp Support/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
-codesign --force --sign - "$APP"
+package() { # theme, app name, bundle id suffix
+    local theme="$1" name="$2" suffix="$3"
+    local app="build/$name.app"
+    rm -rf "$app"
+    mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+    cp "$BIN" "$app/Contents/MacOS/Fuxi"
+    cp Support/Info.plist "$app/Contents/Info.plist"
+    cp Support/AppIcon.icns "$app/Contents/Resources/AppIcon.icns"
+    if [ -n "$theme" ]; then
+        local plist="$app/Contents/Info.plist"
+        plutil -replace CFBundleIdentifier -string "com.rgregory.fuxi.$suffix" "$plist"
+        plutil -replace CFBundleName -string "$name" "$plist"
+        plutil -replace CFBundleDisplayName -string "$name" "$plist"
+        plutil -insert FuxiTheme -string "$theme" "$plist"
+    fi
+    codesign --force --sign - "$app"
+    echo "Built $PWD/$app"
+}
 
-echo "Built $PWD/$APP"
-echo "Run:   open \"$APP\""
-echo "Install: cp -R \"$APP\" /Applications/"
+package "" "Fuxi" ""
+for t in "$@"; do
+    case "$t" in
+        steampunk)   package steampunk   "Fuxi Steampunk" steampunk ;;
+        retroApple)  package retroApple  "Fuxi Retro"     retroapple ;;
+        ibmTerminal) package ibmTerminal "Fuxi Terminal"  ibmterminal ;;
+        *) echo "Unknown theme: $t (use steampunk, retroApple or ibmTerminal)" >&2; exit 1 ;;
+    esac
+done
+
+echo "Run:     open build/*.app"
+echo "Install: cp -R build/Fuxi.app /Applications/"

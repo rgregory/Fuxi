@@ -6,6 +6,10 @@ struct FuxiApp: App {
     @StateObject private var model = AppModel()
     /// "things" (default) or "classic". View ▸ Classic Layout flips it.
     @AppStorage("uiStyle") private var uiStyle = "things"
+    /// View ▸ Theme choice. Empty means the theme this build was packaged with.
+    @AppStorage("theme") private var themeChoice = ""
+
+    private var themeType: ThemeType { ThemeType(rawValue: themeChoice) ?? .bundled }
 
     init() {
         // Lets `swift run` show a normal Dock app; harmless inside the .app bundle.
@@ -19,7 +23,7 @@ struct FuxiApp: App {
                 if uiStyle == "classic" {
                     ContentView()
                 } else {
-                    ThingsRootView()
+                    themedRoot()
                 }
             }
             .environmentObject(model)
@@ -34,8 +38,22 @@ struct FuxiApp: App {
                     set: { uiStyle = $0 ? "classic" : "things" }
                 ))
                 .keyboardShortcut("l", modifiers: [.command, .shift])
+                Picker("Theme", selection: Binding(get: { themeType.rawValue }, set: { themeChoice = $0 })) {
+                    ForEach(ThemeType.allCases) { Text($0.title).tag($0.rawValue) }
+                }
             }
         }
+    }
+
+    private func themedRoot() -> some View {
+        let type = themeType
+        ThemeStore.current = type.theme
+        return ThingsRootView()
+            .font(Fx.style(.body))
+            .foregroundStyle(Fx.fg)
+            .tint(Fx.accent)
+            .preferredColorScheme(type.colorScheme)
+            .id(type)
     }
 }
 

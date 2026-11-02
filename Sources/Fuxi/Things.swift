@@ -33,7 +33,7 @@ struct ThingsRootView: View {
         } detail: {
             NavigationStack {
                 page(nav.pane ?? .overview)
-                    .background(Color(nsColor: .textBackgroundColor))
+                    .background(Fx.bg)
             }
             .id(nav.pane ?? .overview)
         }
@@ -89,6 +89,7 @@ struct ThingsSidebar: View {
             }
         }
         .listStyle(.sidebar)
+        .fxSidebar()
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(spacing: 0) {
                 Divider()
@@ -96,7 +97,7 @@ struct ThingsSidebar: View {
                     Button {
                         Task { await model.refresh() }
                     } label: {
-                        Image(systemName: "arrow.clockwise").font(.system(size: 13, weight: .medium))
+                        Image(systemName: "arrow.clockwise").font(Fx.font(size: 13, weight: .medium))
                     }
                     .buttonStyle(.borderless)
                     .disabled(model.isLoading)
@@ -105,7 +106,7 @@ struct ThingsSidebar: View {
                         ProgressView().controlSize(.small)
                     } else if let t = model.lastRead {
                         Text("Read \(t.formatted(date: .omitted, time: .shortened))")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(Fx.style(.caption)).foregroundStyle(.secondary)
                     }
                     Spacer()
                 }
@@ -118,7 +119,7 @@ struct ThingsSidebar: View {
     private func row(_ p: Pane) -> some View {
         HStack(spacing: 8) {
             Image(systemName: p.icon)
-                .font(.system(size: 14, weight: .medium))
+                .font(Fx.font(size: 14, weight: .medium))
                 .foregroundStyle(nav.pane == p ? Color.white : p.tint)
                 .frame(width: 18)
             Text(p.rawValue).lineLimit(1)
@@ -142,7 +143,7 @@ struct ThingsSidebar: View {
             quiet(model.snapshot.entries.count)
         case .boot:
             if !model.managed.isEmpty && (!model.bootConfigInstalled || !model.bootConfigCurrent) {
-                Image(systemName: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(.orange)
+                Image(systemName: "exclamationmark.triangle.fill").font(Fx.style(.caption)).foregroundStyle(.orange)
             } else {
                 quiet(model.managed.count)
             }
@@ -154,7 +155,7 @@ struct ThingsSidebar: View {
     @ViewBuilder
     private func quiet(_ n: Int) -> some View {
         if n > 0 {
-            Text(n.formatted()).font(.callout.monospacedDigit()).foregroundStyle(.tertiary)
+            Text(n.formatted()).font(Fx.style(.callout).monospacedDigit()).foregroundStyle(.tertiary)
         }
     }
 
@@ -201,12 +202,12 @@ struct ThingsHeader: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 10) {
                 Image(systemName: pane.icon)
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(Fx.font(size: 22, weight: .semibold))
                     .foregroundStyle(pane.tint)
-                Text(title ?? pane.rawValue).font(.system(size: 26, weight: .bold))
+                Text(title ?? pane.rawValue).font(Fx.font(size: 26, weight: .bold))
             }
             Text(subtitle)
-                .font(.system(size: 13))
+                .font(Fx.font(size: 13))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .truncationMode(.tail)
@@ -224,14 +225,14 @@ struct ThingsSection<Content: View>: View {
         VStack(alignment: .leading, spacing: 10) {
             VStack(spacing: 5) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(title).font(.system(size: 13, weight: .semibold)).foregroundStyle(Color.accentColor)
+                    Text(title).font(Fx.font(size: 13, weight: .semibold)).foregroundStyle(Fx.accent)
                     Spacer()
                     if let trailing { trailing }
                     if let count {
-                        Text(count).font(.system(size: 12).monospacedDigit()).foregroundStyle(.secondary)
+                        Text(count).font(Fx.font(size: 12).monospacedDigit()).foregroundStyle(.secondary)
                     }
                 }
-                Rectangle().fill(Color.accentColor.opacity(0.35)).frame(height: 1)
+                Rectangle().fill(Fx.accent.opacity(0.35)).frame(height: 1)
             }
             content
         }
@@ -242,11 +243,20 @@ struct ThingsCard<Content: View>: View {
     var padding: CGFloat = 0
     @ViewBuilder var content: Content
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) { content }
-            .padding(padding)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .controlBackgroundColor)))
-            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.primary.opacity(0.1), lineWidth: 0.5))
+        if Fx.isStandard {
+            VStack(alignment: .leading, spacing: 0) { content }
+                .padding(padding)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .controlBackgroundColor)))
+                .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.primary.opacity(0.1), lineWidth: 0.5))
+        } else {
+            // The theme's panel adds its own padding.
+            Fx.theme.applyPanelStyle(to: AnyView(
+                VStack(alignment: .leading, spacing: 0) { content }
+                    .padding(max(0, padding - 12))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            ))
+        }
     }
 }
 
@@ -284,14 +294,14 @@ struct ThingsPills<T: Hashable>: View {
                         HStack(spacing: 5) {
                             Text(o.label)
                             if let c = o.count {
-                                Text(c.formatted()).foregroundStyle(on ? Color.accentColor.opacity(0.7) : Color.secondary.opacity(0.7))
+                                Text(c.formatted()).foregroundStyle(on ? Fx.accent.opacity(0.7) : Fx.muted.opacity(0.7))
                             }
                         }
-                        .font(.system(size: 12, weight: .medium))
+                        .font(Fx.font(size: 12, weight: .medium))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(Capsule().fill(on ? Color.accentColor.opacity(0.14) : Color.clear))
-                        .foregroundStyle(on ? Color.accentColor : Color.secondary)
+                        .background(Capsule().fill(on ? Fx.accent.opacity(0.14) : Color.clear))
+                        .foregroundStyle(on ? Fx.accent : Fx.muted)
                         .contentShape(Capsule())
                     }
                     .buttonStyle(.plain)
@@ -331,7 +341,7 @@ struct ThingsOverview: View {
                                       alignment: .leading, spacing: 8) {
                                 ForEach(model.facts) { f in
                                     VStack(alignment: .leading, spacing: 1) {
-                                        Text(f.label.uppercased()).font(.caption2).foregroundStyle(.secondary)
+                                        Text(f.label.uppercased()).font(Fx.style(.caption2)).foregroundStyle(.secondary)
                                         Text(f.value).font(.system(.callout, design: .monospaced))
                                             .lineLimit(1).minimumScaleFactor(0.8)
                                             .textSelection(.enabled)
@@ -342,20 +352,20 @@ struct ThingsOverview: View {
                                 ForEach(Severity.allCases) { s in
                                     HStack(spacing: 5) {
                                         SeverityBadge(severity: s)
-                                        Text("\(model.count(s))").font(.headline.monospacedDigit())
+                                        Text("\(model.count(s))").font(Fx.style(.headline).monospacedDigit())
                                     }
                                 }
                             }
                             if let days = model.uptimeDays, days >= 14 {
                                 Label("Up \(days) days. macOS security updates only take effect after a restart.",
                                       systemImage: "arrow.clockwise.circle")
-                                    .font(.callout)
+                                    .font(Fx.style(.callout))
                                     .foregroundStyle(.orange)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                             if let shutdown = model.abnormalShutdown {
                                 Label(shutdown, systemImage: "exclamationmark.triangle")
-                                    .font(.callout)
+                                    .font(Fx.style(.callout))
                                     .foregroundStyle(.orange)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
@@ -402,18 +412,18 @@ struct ThingsGaugeRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline) {
-                Text(gauge.name).font(.callout)
+                Text(gauge.name).font(Fx.style(.callout))
                 Spacer()
-                Text(gauge.caption).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                Text(gauge.caption).font(Fx.style(.caption).monospacedDigit()).foregroundStyle(.secondary)
                 Text("\(Int(gauge.percent.rounded()))%")
-                    .font(.callout.monospacedDigit().weight(.semibold))
-                    .foregroundStyle(gauge.isWarning ? Color.red : Color.primary)
+                    .font(Fx.style(.callout).monospacedDigit().weight(.semibold))
+                    .foregroundStyle(gauge.isWarning ? Color.red : Fx.fg)
                     .frame(minWidth: 40, alignment: .trailing)
             }
             ProgressView(value: gauge.percent, total: 100)
-                .tint(gauge.isWarning ? .red : gauge.percent >= 99 ? .orange : .teal)
+                .tint(gauge.isWarning ? .red : gauge.percent >= 99 ? .orange : Fx.bar)
             if let note = gauge.note {
-                Text(note).font(.caption).foregroundStyle(.secondary)
+                Text(note).font(Fx.style(.caption)).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -428,11 +438,11 @@ struct ThingsPostureRow: View {
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: icon).foregroundStyle(color).frame(width: 18)
-            Text(item.name).font(.callout).lineLimit(1)
+            Text(item.name).font(Fx.style(.callout)).lineLimit(1)
             Spacer(minLength: 6)
             Text(item.value)
-                .font(.caption.monospaced())
-                .foregroundStyle(item.status == .attention ? Color.orange : Color.secondary)
+                .font(Fx.style(.caption).monospaced())
+                .foregroundStyle(item.status == .attention ? Color.orange : Fx.muted)
                 .lineLimit(1).truncationMode(.middle)
         }
         .padding(.vertical, 5)
@@ -516,7 +526,7 @@ struct ThingsFindings: View {
                         let writes = selectedWrites
                         Task { await model.apply(writes) }
                     }
-                    .buttonStyle(.borderedProminent)
+                    .fxProminent()
                     .disabled(selectedWrites.isEmpty || model.isApplying)
                 }
                 .frame(maxWidth: pageMaxWidth)
@@ -524,7 +534,7 @@ struct ThingsFindings: View {
                 .padding(.vertical, 10)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .background(Color(nsColor: .textBackgroundColor))
+            .background(Fx.bg)
         }
     }
 }
@@ -575,8 +585,8 @@ struct ThingsExplorer: View {
                     TextField("Search keys and values", text: $ui.query).textFieldStyle(.plain)
                 }
                 .padding(.horizontal, 8).padding(.vertical, 5)
-                .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .controlBackgroundColor)))
-                .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.primary.opacity(0.1), lineWidth: 0.5))
+                .background(RoundedRectangle(cornerRadius: 6).fill(Fx.panel))
+                .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Fx.hairline, lineWidth: 0.5))
                 Toggle("Reviewed only", isOn: $ui.flaggedOnly)
                     .toggleStyle(.checkbox)
                     .help("Show only keys Fuxi reviews")
@@ -587,7 +597,7 @@ struct ThingsExplorer: View {
                 TableColumn("Key") { e in
                     Text(e.key)
                         .font(mono)
-                        .foregroundStyle(Catalog.keys.contains(e.key) ? Color.accentColor : Color.primary)
+                        .foregroundStyle(Catalog.keys.contains(e.key) ? Fx.accent : Fx.fg)
                 }
                 .width(min: 220, ideal: 330)
                 TableColumn("Value") { e in
@@ -606,7 +616,7 @@ struct ThingsExplorer: View {
                 if let e = entry(ids.first) { ui.editing = e }
             }
             .clipShape(RoundedRectangle(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.primary.opacity(0.1), lineWidth: 0.5))
+            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Fx.hairline, lineWidth: 0.5))
         }
         .frame(maxWidth: pageMaxWidth, maxHeight: .infinity, alignment: .topLeading)
         .padding(.horizontal, gutter)
@@ -647,9 +657,9 @@ struct ThingsBoot: View {
                     ThingsCard(padding: 12) {
                         HStack(spacing: 10) {
                             Image(systemName: model.bootConfigInstalled ? "checkmark.circle.fill" : "circle.dashed")
-                                .foregroundStyle(model.bootConfigInstalled ? (model.bootConfigCurrent ? Color.green : Color.orange) : Color.secondary)
+                                .foregroundStyle(model.bootConfigInstalled ? (model.bootConfigCurrent ? Color.green : Color.orange) : Fx.muted)
                             Text(model.bootConfigInstalled ? BootConfig.path : "Not installed")
-                                .font(.callout).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+                                .font(Fx.style(.callout)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                             Spacer()
                             if model.bootConfigInstalled {
                                 Button("Remove…", role: .destructive) { Task { await model.removeBootConfig() } }
@@ -657,7 +667,7 @@ struct ThingsBoot: View {
                             Button(model.bootConfigInstalled ? "Update…" : "Install at Boot…") {
                                 Task { await model.installBootConfig() }
                             }
-                            .buttonStyle(.borderedProminent)
+                            .fxProminent()
                             .disabled(model.bootConfigInstalled && model.bootConfigCurrent)
                         }
                     }
@@ -706,18 +716,18 @@ struct ThingsHistory: View {
                 ThingsSection(title: "Changes", count: "\(model.history.count)",
                               trailing: AnyView(
                                 Button("Clear") { model.clearHistory() }
-                                    .buttonStyle(.link).font(.system(size: 12))
+                                    .buttonStyle(.link).font(Fx.font(size: 12))
                               )) {
                     ThingsCard {
                         ThingsRows(items: model.history) { c in
                             HStack(spacing: 8) {
                                 Text(c.key).font(.system(.callout, design: .monospaced)).lineLimit(1)
                                 ValueChip(text: c.oldValue)
-                                Image(systemName: "arrow.right").font(.caption).foregroundStyle(.secondary)
+                                Image(systemName: "arrow.right").font(Fx.style(.caption)).foregroundStyle(.secondary)
                                 ValueChip(text: c.newValue, accent: true)
                                 Spacer(minLength: 8)
                                 Text(c.date.formatted(date: .abbreviated, time: .shortened))
-                                    .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                                    .font(Fx.style(.caption).monospacedDigit()).foregroundStyle(.secondary)
                                 Button("Revert…") { Task { await model.revert(c) } }
                                     .controlSize(.small)
                                     .disabled(model.isApplying || model.snapshot[c.key] == c.oldValue)
