@@ -319,6 +319,16 @@ struct ThingsOverview: View {
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var nav: NavigationUI
 
+    @ViewBuilder
+    private func severityTally(_ levels: [Severity]) -> some View {
+        ForEach(levels) { s in
+            HStack(spacing: 5) {
+                SeverityBadge(severity: s)
+                Text("\(model.count(s))").font(Fx.style(.headline).monospacedDigit())
+            }
+        }
+    }
+
     private var subtitle: String {
         var parts = [model.hostname]
         if let t = model.lastRead { parts.append("read \(t.formatted(date: .omitted, time: .shortened))") }
@@ -343,17 +353,18 @@ struct ThingsOverview: View {
                                     VStack(alignment: .leading, spacing: 1) {
                                         Text(f.label.uppercased()).font(Fx.style(.caption2)).foregroundStyle(.secondary)
                                         Text(f.value).font(.system(.callout, design: .monospaced))
-                                            .lineLimit(1).minimumScaleFactor(0.8)
+                                            .lineLimit(2).minimumScaleFactor(0.8)
+                                            .fixedSize(horizontal: false, vertical: true)
                                             .textSelection(.enabled)
                                     }
                                 }
                             }
-                            HStack(spacing: 10) {
-                                ForEach(Severity.allCases) { s in
-                                    HStack(spacing: 5) {
-                                        SeverityBadge(severity: s)
-                                        Text("\(model.count(s))").font(Fx.style(.headline).monospacedDigit())
-                                    }
+                            // One row when it fits; wider theme fonts wrap it to two.
+                            ViewThatFits(in: .horizontal) {
+                                HStack(spacing: 10) { severityTally(Severity.allCases) }
+                                VStack(alignment: .leading, spacing: 6) {
+                                    HStack(spacing: 10) { severityTally(Array(Severity.allCases.prefix(3))) }
+                                    HStack(spacing: 10) { severityTally(Array(Severity.allCases.dropFirst(3))) }
                                 }
                             }
                             if let days = model.uptimeDays, days >= 14 {
@@ -389,7 +400,9 @@ struct ThingsOverview: View {
 
             if !model.posture.isEmpty {
                 let good = model.posture.filter { $0.status == .good }.count
-                let per = (model.posture.count + 2) / 3
+                // Two columns in themes: their fonts are wider and their panels pad more.
+                let columns = Fx.isStandard ? 3 : 2
+                let per = (model.posture.count + columns - 1) / columns
                 let cols: [[PostureItem]] = stride(from: 0, to: model.posture.count, by: max(per, 1)).map {
                     Array(model.posture[$0..<min($0 + per, model.posture.count)])
                 }
