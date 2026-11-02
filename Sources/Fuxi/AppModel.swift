@@ -46,10 +46,10 @@ final class AppModel: ObservableObject {
     @Published var selection: Set<String> = []
     @Published var alert: AlertItem?
     @Published private(set) var state: SavedState
-    @Published private(set) var daemonInstalled = false
+    @Published private(set) var bootConfigInstalled = false
     @Published private(set) var pendingBootArgs: String?
     @Published private(set) var xprotect: XProtectStatus?
-    @Published private(set) var installedScript: String?
+    @Published private(set) var installedConfig: String?
 
     private var didSeedSelection = false
 
@@ -73,8 +73,8 @@ final class AppModel: ObservableObject {
     func baseline(_ key: String) -> String? { state.baseline[key] }
     var baselineDate: Date? { state.baselineDate }
 
-    var bootScript: String { BootDaemon.script(for: state.managed) }
-    var bootScriptCurrent: Bool { installedScript == bootScript }
+    var bootConfigText: String { BootConfig.text(for: state.managed) }
+    var bootConfigCurrent: Bool { installedConfig == bootConfigText }
 
     /// Read-only security state reported by the kernel. Nothing here can be changed with sysctl.
     var posture: [PostureItem] {
@@ -273,10 +273,10 @@ final class AppModel: ObservableObject {
                 state.baselineDate = Date()
                 StateStore.save(state)
             }
-            daemonInstalled = BootDaemon.isInstalled
+            bootConfigInstalled = BootConfig.isInstalled
             pendingBootArgs = await Task.detached(priority: .utility) { Sysctl.pendingBootArgs() }.value
             xprotect = await Task.detached(priority: .utility) { XProtectStatus.read() }.value
-            installedScript = BootDaemon.installedScript
+            installedConfig = BootConfig.installedText
             if !didSeedSelection {
                 didSeedSelection = true
                 selection = Set(findings.filter { $0.actionable && $0.rule.defaultSelected }.map(\.id))
@@ -370,14 +370,14 @@ final class AppModel: ObservableObject {
         StateStore.save(state)
     }
 
-    // MARK: Boot daemon
+    // MARK: At boot
 
-    func installDaemon() async {
+    func installBootConfig() async {
         do {
-            let command = try BootDaemon.prepareInstall(managed: state.managed)
-            _ = try await Privileged.run(command, prompt: "Fuxi wants to install a startup item that applies \(state.managed.count) kernel setting(s) at boot.")
+            let command = try BootConfig.prepareInstall(managed: state.managed)
+            _ = try await Privileged.run(command, prompt: "Fuxi wants to save \(state.managed.count) kernel setting(s) to \(BootConfig.path) so they apply at startup.")
             await refresh()
-            alert = AlertItem(title: "Installed at boot", message: "\(BootDaemon.plistPath) runs \(BootDaemon.scriptPath) at every startup.")
+            alert = AlertItem(title: "Saved for boot", message: "macOS reads \(BootConfig.path) at startup. Restart, then check this list: macOS resets a few keys after startup, and those need setting again.")
         } catch FuxiError.cancelled {
             return
         } catch {
@@ -385,11 +385,11 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func removeDaemon() async {
+    func removeBootConfig() async {
         do {
-            _ = try await Privileged.run(BootDaemon.removeCommand, prompt: "Fuxi wants to remove its startup item.")
+            _ = try await Privileged.run(BootConfig.removeCommand, prompt: "Fuxi wants to remove its settings from \(BootConfig.path).")
             await refresh()
-            alert = AlertItem(title: "Removed", message: "Settings will return to macOS defaults at the next restart.")
+            alert = AlertItem(title: "Removed", message: "Settings return to macOS defaults at the next restart. Any sysctl.conf you had before Fuxi was put back.")
         } catch FuxiError.cancelled {
             return
         } catch {

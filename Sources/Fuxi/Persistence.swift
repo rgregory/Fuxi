@@ -41,57 +41,42 @@ enum StateStore {
     }
 }
 
-/// Boot-time persistence through a LaunchDaemon. macOS does not reliably read /etc/sysctl.conf.
-enum BootDaemon {
-    static let label = "com.fuxi.sysctl"
-    static let plistPath = "/Library/LaunchDaemons/com.fuxi.sysctl.plist"
-    static let scriptPath = "/usr/local/sbin/fuxi-sysctl.sh"
-    static let logPath = "/var/log/fuxi-sysctl.log"
+/// Boot-time persistence through /etc/sysctl.conf, which macOS reads at startup.
+/// macOS services reset a few keys after startup, so a restart is the real test.
+enum BootConfig {
+    static let path = "/etc/sysctl.conf"
+    static let backupPath = "/etc/sysctl.conf.fuxi-backup"
+    static let header = "# Managed by Fuxi. Changes made here are overwritten."
 
-    static func script(for managed: [String: String]) -> String {
-        var lines = ["#!/bin/sh", "# Managed by Fuxi. Changes made here are overwritten.", ""]
+    static func text(for managed: [String: String]) -> String {
+        var lines = [header, ""]
         for key in managed.keys.sorted() {
             if let value = managed[key], Sysctl.isValidKey(key), Sysctl.isValidValue(value) {
-                lines.append("/usr/sbin/sysctl -w \(key)=\(value)")
+                lines.append("\(key)=\(value)")
             }
         }
         return lines.joined(separator: "\n") + "\n"
     }
 
-    static let plist = """
-    <?xml version="1.0" encoding="UTF-8"?>
-    <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-    <plist version="1.0">
-    <dict>
-      <key>Label</key><string>\(label)</string>
-      <key>ProgramArguments</key>
-      <array><string>\(scriptPath)</string></array>
-      <key>RunAtLoad</key><true/>
-      <key>StandardErrorPath</key><string>\(logPath)</string>
-    </dict>
-    </plist>
+    static var installedText: String? { try? String(contentsOfFile: path, encoding: .utf8) }
 
-    """
+    /// True only when the file exists and Fuxi wrote it.
+    static var isInstalled: Bool { installedText?.hasPrefix(header) ?? false }
 
-    static var isInstalled: Bool { FileManager.default.fileExists(atPath: plistPath) }
-    static var installedScript: String? { try? String(contentsOfFile: scriptPath, encoding: .utf8) }
-
-    /// Writes staging files and returns the root command that installs them.
+    /// Writes a staging file and returns the root command that installs it. A sysctl.conf
+    /// that Fuxi didn't write is copied to the backup path first, once.
     static func prepareInstall(managed: [String: String]) throws -> String {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("fuxi-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let scriptURL = dir.appendingPathComponent("fuxi-sysctl.sh")
-        let plistURL = dir.appendingPathComponent("com.fuxi.sysctl.plist")
-        try script(for: managed).write(to: scriptURL, atomically: true, encoding: .utf8)
-        try plist.write(to: plistURL, atomically: true, encoding: .utf8)
+        let fileURL = dir.appendingPathComponent("sysctl.conf")
+        try text(for: managed).write(to: fileURL, atomically: true, encoding: .utf8)
         return [
-            "/bin/mkdir -p /usr/local/sbin",
-            "/usr/bin/install -m 755 -o root -g wheel '\(scriptURL.path)' \(scriptPath)",
-            "/usr/bin/install -m 644 -o root -g wheel '\(plistURL.path)' \(plistPath)",
-            "(/bin/launchctl bootout system/\(label) >/dev/null 2>&1; /bin/sleep 1; /bin/launchctl bootstrap system \(plistPath))",
+            "if [ -f \(path) ] && [ ! -f \(backupPath) ] && ! /usr/bin/head -1 \(path) | /usr/bin/grep -qF 'Managed by Fuxi'; then /bin/cp -p \(path) \(backupPath); fi",
+            "/usr/bin/install -m 644 -o root -g wheel '\(fileURL.path)' \(path)",
             "/bin/rm -rf '\(dir.path)'",
         ].joined(separator: " && ")
     }
 
-    static let removeCommand = "/bin/launchctl bootout system/\(label) >/dev/null 2>&1; /bin/rm -f \(plistPath) \(scriptPath)"
+    /// Puts back the file Fuxi replaced, or deletes Fuxi's file if there was none.
+    static let removeCommand = "if [ -f \(backupPath) ]; then /bin/mv \(backupPath) \(path); else /bin/rm -f \(path); fi"
 }

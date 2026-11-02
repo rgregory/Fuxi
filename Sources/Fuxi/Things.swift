@@ -141,7 +141,7 @@ struct ThingsSidebar: View {
         case .explorer:
             quiet(model.snapshot.entries.count)
         case .boot:
-            if !model.managed.isEmpty && (!model.daemonInstalled || !model.bootScriptCurrent) {
+            if !model.managed.isEmpty && (!model.bootConfigInstalled || !model.bootConfigCurrent) {
                 Image(systemName: "exclamationmark.triangle.fill").font(.caption).foregroundStyle(.orange)
             } else {
                 quiet(model.managed.count)
@@ -166,8 +166,8 @@ struct ThingsSidebar: View {
         case .explorer: return "\(model.snapshot.entries.count) kernel settings"
         case .boot:
             if model.managed.isEmpty { return "No changes kept at boot" }
-            if !model.daemonInstalled { return "Changes reset at restart. Install at boot to keep them." }
-            if !model.bootScriptCurrent { return "Startup script is out of date" }
+            if !model.bootConfigInstalled { return "Changes reset at restart. Install at boot to keep them." }
+            if !model.bootConfigCurrent { return "Startup script is out of date" }
             return "\(model.managed.count) changes kept at boot"
         case .history: return "\(model.history.count) changes recorded"
         }
@@ -622,9 +622,9 @@ struct ThingsBoot: View {
 
     private var status: String {
         if keys.isEmpty { return "Nothing applied yet. Changes you make show up here." }
-        if !model.daemonInstalled { return "Not installed · changes reset at restart" }
-        if model.bootScriptCurrent { return "Installed · \(keys.count) changes kept at every boot" }
-        return "Installed, but the startup script is out of date"
+        if !model.bootConfigInstalled { return "Not installed · changes reset at restart" }
+        if model.bootConfigCurrent { return "Installed · \(keys.count) changes kept at every boot" }
+        return "Installed, but \(BootConfig.path) is out of date"
     }
 
     var body: some View {
@@ -637,22 +637,22 @@ struct ThingsBoot: View {
                         .foregroundStyle(.secondary)
                 }
             } else {
-                ThingsSection(title: "Startup", trailing: nil) {
+                ThingsSection(title: "Status", trailing: nil) {
                     ThingsCard(padding: 12) {
                         HStack(spacing: 10) {
-                            Image(systemName: model.daemonInstalled ? "checkmark.circle.fill" : "circle.dashed")
-                                .foregroundStyle(model.daemonInstalled ? (model.bootScriptCurrent ? Color.green : Color.orange) : Color.secondary)
-                            Text(model.daemonInstalled ? BootDaemon.plistPath : "Not installed")
+                            Image(systemName: model.bootConfigInstalled ? "checkmark.circle.fill" : "circle.dashed")
+                                .foregroundStyle(model.bootConfigInstalled ? (model.bootConfigCurrent ? Color.green : Color.orange) : Color.secondary)
+                            Text(model.bootConfigInstalled ? BootConfig.path : "Not installed")
                                 .font(.callout).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                             Spacer()
-                            if model.daemonInstalled {
-                                Button("Remove…", role: .destructive) { Task { await model.removeDaemon() } }
+                            if model.bootConfigInstalled {
+                                Button("Remove…", role: .destructive) { Task { await model.removeBootConfig() } }
                             }
-                            Button(model.daemonInstalled ? "Update…" : "Install at Boot…") {
-                                Task { await model.installDaemon() }
+                            Button(model.bootConfigInstalled ? "Update…" : "Install at Boot…") {
+                                Task { await model.installBootConfig() }
                             }
                             .buttonStyle(.borderedProminent)
-                            .disabled(model.daemonInstalled && model.bootScriptCurrent)
+                            .disabled(model.bootConfigInstalled && model.bootConfigCurrent)
                         }
                     }
                 }
@@ -667,9 +667,9 @@ struct ThingsBoot: View {
                     }
                 }
 
-                ThingsSection(title: "Startup script") {
+                ThingsSection(title: BootConfig.path) {
                     ThingsCard(padding: 14) {
-                        Text(model.bootScript)
+                        Text(model.bootConfigText)
                             .font(.system(.caption, design: .monospaced))
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)

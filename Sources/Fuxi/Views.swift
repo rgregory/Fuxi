@@ -430,8 +430,8 @@ struct BootView: View {
                             BootRow(key: key, desired: model.managed[key] ?? "")
                         }
                     }
-                    Section("Startup script") {
-                        Text(model.bootScript)
+                    Section(BootConfig.path) {
+                        Text(model.bootConfigText)
                             .font(.system(.caption, design: .monospaced))
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -440,18 +440,18 @@ struct BootView: View {
             }
             Divider()
             HStack(spacing: 10) {
-                Image(systemName: model.daemonInstalled ? "checkmark.circle.fill" : "circle.dashed")
-                    .foregroundStyle(model.daemonInstalled ? (model.bootScriptCurrent ? Color.green : Color.orange) : Color.secondary)
+                Image(systemName: model.bootConfigInstalled ? "checkmark.circle.fill" : "circle.dashed")
+                    .foregroundStyle(model.bootConfigInstalled ? (model.bootConfigCurrent ? Color.green : Color.orange) : Color.secondary)
                 Text(statusText).foregroundStyle(.secondary)
                 Spacer()
-                if model.daemonInstalled {
-                    Button("Remove from Boot…", role: .destructive) { Task { await model.removeDaemon() } }
+                if model.bootConfigInstalled {
+                    Button("Remove from Boot…", role: .destructive) { Task { await model.removeBootConfig() } }
                 }
-                Button(model.daemonInstalled ? "Update Boot Script…" : "Install at Boot…") {
-                    Task { await model.installDaemon() }
+                Button(model.bootConfigInstalled ? "Update at Boot…" : "Install at Boot…") {
+                    Task { await model.installBootConfig() }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(keys.isEmpty || (model.daemonInstalled && model.bootScriptCurrent))
+                .disabled(keys.isEmpty || (model.bootConfigInstalled && model.bootConfigCurrent))
             }
             .padding(12)
         }
@@ -459,9 +459,9 @@ struct BootView: View {
     }
 
     private var statusText: String {
-        if !model.daemonInstalled { return "Not installed. Changes reset at restart." }
-        if model.bootScriptCurrent { return "Installed. \(BootDaemon.plistPath)" }
-        return "Installed, but the startup script is out of date."
+        if !model.bootConfigInstalled { return "Not installed. Changes reset at restart." }
+        if model.bootConfigCurrent { return "Installed. \(BootConfig.path)" }
+        return "Installed, but \(BootConfig.path) is out of date."
     }
 }
 
@@ -486,7 +486,7 @@ struct BootRow: View {
                     .disabled(model.isApplying)
             }
             Button("Stop Keeping") { model.stopManaging(key) }
-                .help("Leave the current value but drop it from the startup script")
+                .help("Leave the current value but drop it from \(BootConfig.path)")
         }
     }
 }

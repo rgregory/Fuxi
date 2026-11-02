@@ -18,7 +18,7 @@ Or open `Package.swift` in Xcode and press Run.
 - **Overview**: hardware, OS, uptime, load, and how close the kernel is to its vnode, file and swap limits.
 - **Findings**: each reviewed key with its current value, the recommended value and why. Select several and apply them together, or apply one at a time.
 - **All Keys**: every key from `sysctl -a`, searchable. Double-click a row (or right-click › Set Value…) to change any writable key.
-- **At Boot**: changes made with `sysctl -w` reset at restart. Fuxi can install `/Library/LaunchDaemons/com.fuxi.sysctl.plist`, which runs `/usr/local/sbin/fuxi-sysctl.sh` at startup.
+- **At Boot**: changes made with `sysctl -w` reset at restart. Fuxi can save them to `/etc/sysctl.conf`, which macOS reads at startup. A `sysctl.conf` you already had is backed up to `/etc/sysctl.conf.fuxi-backup` first. macOS services reset a few keys after startup, so restart and check that each value stuck.
 - **History**: every change with its previous value and a Revert button.
 
 ## How authorization works
@@ -30,8 +30,8 @@ On first launch Fuxi saves every current value as the macOS defaults, in `~/Libr
 ## Remove everything
 
 ```sh
-sudo launchctl bootout system/com.fuxi.sysctl
-sudo rm -f /Library/LaunchDaemons/com.fuxi.sysctl.plist /usr/local/sbin/fuxi-sysctl.sh
+sudo rm -f /etc/sysctl.conf
+[ -f /etc/sysctl.conf.fuxi-backup ] && sudo mv /etc/sysctl.conf.fuxi-backup /etc/sysctl.conf
 rm -rf ~/Library/Application\ Support/Fuxi
 ```
 
