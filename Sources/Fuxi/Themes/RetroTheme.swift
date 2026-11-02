@@ -15,8 +15,8 @@ public struct RetroTheme: DashboardTheme {
         accent: Color.black
     )
 
-    /// Chicago if a copy is installed; otherwise Geneva.
-    public let fontName = "Chicago"
+    /// System font.
+    public let fontName = ""
 
     public func applyPanelStyle(to view: AnyView) -> AnyView {
         AnyView(

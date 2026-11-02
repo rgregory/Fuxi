@@ -87,7 +87,7 @@ The default layout uses cards and sections. **View › Classic Layout** (⇧⌘L
 | Theme | Look |
 |---|---|
 | Standard | The macOS system look |
-| Retro | Off-white window, white panels with 2-px black borders and hard black drop shadows, square corners, monochrome, Chicago (or Geneva) |
+| Retro | Off-white window, white panels with 2-px black borders and hard black drop shadows, square corners, monochrome, system font |
 | Tron | Black grid, glowing cyan chamfered panels, uppercase glowing headings, Orbitron (or a condensed sans) |
 | Steampunk | Mahogany and brass, corner brackets, Hoefler Text |
 
