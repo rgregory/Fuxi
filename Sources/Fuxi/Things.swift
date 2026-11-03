@@ -565,7 +565,15 @@ struct ThingsExplorer: View {
             VStack(alignment: .leading, spacing: 12) {
                 ThingsHeader(pane: .explorer,
                              subtitle: "\(rows.count.formatted()) of \(model.snapshot.entries.count.formatted()) settings · double-click a row to change it")
-                ThingsPills(options: pills, selection: $ui.namespace)
+                Menu {
+                    ForEach(pills) { o in
+                        Button("\(o.label) \((o.count ?? 0).formatted())") { ui.namespace = o.value }
+                    }
+                } label: {
+                    Text(ui.namespace.isEmpty ? "All namespaces" : "Namespace: \(ui.namespace)")
+                }
+                .menuStyle(.button)
+                .fixedSize()
             }
             HStack(spacing: 10) {
                 HStack(spacing: 6) {

@@ -13,16 +13,16 @@ struct OverviewView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(model.hostname).font(.largeTitle.weight(.semibold))
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(model.hostname).font(.title.weight(.semibold))
                     if let t = model.lastRead {
                         Text("Read \(t.formatted(date: .abbreviated, time: .standard))")
                             .foregroundStyle(.secondary)
                     }
                 }
 
-                HStack(alignment: .top, spacing: 24) {
+                HStack(alignment: .top, spacing: 16) {
                     // Left: system facts, severity counts, restart reminder.
                     GroupBox {
                     VStack(alignment: .leading, spacing: 14) {
@@ -105,7 +105,8 @@ struct OverviewView: View {
                     SecurityPostureBox(items: model.posture)
                 }
             }
-            .padding(24)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 14)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .navigationTitle("Overview")
@@ -119,36 +120,32 @@ struct SecurityPostureBox: View {
 
     var body: some View {
         GroupBox {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("\(goodCount) of \(items.count) at the recommended setting. Read-only: these change only through Recovery, System Settings or Developer Mode, not sysctl.")
-                    .font(.caption).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 280), spacing: 16, alignment: .topLeading)],
-                          alignment: .leading, spacing: 12) {
-                    ForEach(items) { item in
-                        HStack(alignment: .top, spacing: 8) {
-                            Image(systemName: icon(item.status))
-                                .foregroundStyle(color(item.status))
-                                .font(.body)
-                            VStack(alignment: .leading, spacing: 1) {
-                                HStack(alignment: .firstTextBaseline) {
-                                    Text(item.name).font(.callout.weight(.medium))
-                                    Spacer(minLength: 6)
-                                    Text(item.value).font(.callout.monospaced())
-                                        .foregroundStyle(item.status == .attention ? color(item.status) : .secondary)
-                                        .lineLimit(1).truncationMode(.middle)
-                                }
-                                Text(item.detail).font(.caption).foregroundStyle(.secondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                        }
-                        .help(item.detail)
+            // One line per item; hover for what it means.
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 18, alignment: .leading), count: 3),
+                      alignment: .leading, spacing: 6) {
+                ForEach(items) { item in
+                    HStack(spacing: 6) {
+                        Image(systemName: icon(item.status))
+                            .foregroundStyle(color(item.status))
+                            .frame(width: 16)
+                        Text(item.name).font(.callout).lineLimit(1).minimumScaleFactor(0.85)
+                        Spacer(minLength: 4)
+                        Text(item.value).font(.caption.monospaced())
+                            .foregroundStyle(item.status == .attention ? color(item.status) : .secondary)
+                            .lineLimit(1).truncationMode(.middle)
                     }
+                    .contentShape(Rectangle())
+                    .help(item.detail)
                 }
             }
-            .padding(6)
+            .padding(4)
         } label: {
-            Text("Security posture").font(.headline)
+            HStack {
+                Text("Security posture").font(.headline)
+                Spacer()
+                Text("\(goodCount) of \(items.count) · read-only, hover for details")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
         }
     }
 
