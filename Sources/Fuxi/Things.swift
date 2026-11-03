@@ -32,6 +32,7 @@ struct ThingsRootView: View {
         } detail: {
             NavigationStack {
                 page(nav.pane ?? .overview)
+                    .buttonStyle(ThemedButtonStyle())
                     .background(Fx.bg)
             }
             .id(nav.pane ?? .overview)

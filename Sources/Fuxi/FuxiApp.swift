@@ -52,8 +52,8 @@ struct FuxiApp: App {
         let type = themeType
         ThemeStore.current = type.theme
         return ThingsRootView()
-            // Every button and checkbox takes the theme's style unless it sets its own.
-            .buttonStyle(ThemedButtonStyle())
+            // Checkboxes take the theme's style; buttons are styled per page (ThingsRootView),
+            // so the window toolbar keeps its system buttons.
             .toggleStyle(FxCheckbox())
             .font(Fx.style(.body))
             .foregroundStyle(Fx.fg)
