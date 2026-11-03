@@ -82,6 +82,8 @@ Every change with the time, the old value and the new value, and a **Revert…**
 
 Fuxi has two themes. **Retro** is the default; **⇧⌘T** flips to **Tron** and back, and **View › Theme** lists both.
 
+**View › Classic Layout** (⇧⌘L) switches to a plain macOS list layout with system controls. It isn't themed; ⇧⌘L again returns to Retro or Tron.
+
 | Theme | Look |
 |---|---|
 | Retro | Off-white window, white panels with 2-px black borders and hard black drop shadows, slightly rounded buttons, square checkboxes, black segment strips, monochrome, system font |
@@ -255,6 +257,7 @@ Sources/Fuxi/
   Themes/                Theme protocol, Retro and Tron, themed controls
   Things.swift           Sidebar and the five pages
   Shared.swift           Finding rows, Set Value sheet, boot rows
+  Views.swift            Classic layout
 ```
 
 ## Adding a check
