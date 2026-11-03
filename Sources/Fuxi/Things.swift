@@ -284,7 +284,6 @@ struct ThingsPills<T: Hashable>: View {
                 (o.value, o.count.map { "\(o.label) \($0.formatted())" } ?? o.label,
                  i < 9 ? KeyboardShortcut(KeyEquivalent(Character(String(i + 1))), modifiers: .command) : nil)
             })
-            .padding(.trailing, 3).padding(.bottom, 3)   // room for the hard shadow
         }
     }
 }

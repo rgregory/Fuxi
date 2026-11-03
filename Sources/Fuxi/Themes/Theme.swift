@@ -160,7 +160,7 @@ struct FxCheckbox: ToggleStyle {
     }
 }
 
-/// One segment strip for filters. Retro: 2-px black border, hard shadow, chosen segment black.
+/// One segment strip for filters. Retro: thin black outline, chosen segment black.
 /// Tron: cyan outline, chosen segment cyan.
 struct FxSegments<T: Hashable>: View {
     @Binding var selection: T
@@ -172,14 +172,14 @@ struct FxSegments<T: Hashable>: View {
         HStack(spacing: 0) {
             ForEach(Array(options.enumerated()), id: \.offset) { i, o in
                 let on = o.0 == selection
-                if i > 0 { Rectangle().fill(ink).frame(width: Fx.isTron ? 1 : 2) }
+                if i > 0 { Rectangle().fill(ink.opacity(Fx.isTron ? 1 : 0.35)).frame(width: 1) }
                 Button { selection = o.0 } label: {
                     Text(o.1)
-                        .font(Fx.font(size: 12, weight: on ? .semibold : .regular))
+                        .font(Fx.font(size: 12, weight: on ? .medium : .regular))
                         .textCase(Fx.isTron ? .uppercase : nil)
                         .lineLimit(1)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 3)
                         .foregroundColor(on ? (Fx.isTron ? Fx.bg : .white) : (Fx.isTron ? Fx.accent : .black))
                         .background(on ? ink : (Fx.isTron ? Color.clear : Color.white))
                         .contentShape(Rectangle())
@@ -190,9 +190,8 @@ struct FxSegments<T: Hashable>: View {
         }
         .fixedSize()
         .clipShape(RoundedRectangle(cornerRadius: Fx.isTron ? 0 : 5))
-        .overlay(RoundedRectangle(cornerRadius: Fx.isTron ? 0 : 5).strokeBorder(ink, lineWidth: Fx.isTron ? 1 : 2))
+        .overlay(RoundedRectangle(cornerRadius: Fx.isTron ? 0 : 5).strokeBorder(ink, lineWidth: 1))
         .compositingGroup()
-        .shadow(color: Fx.isTron ? Fx.accent.opacity(0.6) : .black,
-                radius: Fx.isTron ? 4 : 0, x: Fx.isTron ? 0 : 2, y: Fx.isTron ? 0 : 2)
+        .shadow(color: Fx.isTron ? Fx.accent.opacity(0.6) : .clear, radius: Fx.isTron ? 4 : 0)
     }
 }
