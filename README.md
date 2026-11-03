@@ -80,9 +80,9 @@ Every change with the time, the old value and the new value, and a **Revert…**
 
 ### Themes
 
-Fuxi has two themes. **Retro** is the default; **⇧⌘T** flips to **Tron** and back, and **View › Theme** lists both.
+**View › Theme** has Retro (the default), Tron and Classic. **⇧⌘T** flips between Retro and Tron.
 
-**View › Classic Layout** (⇧⌘L) switches to a plain macOS list layout with system controls. It isn't themed; ⇧⌘L again returns to Retro or Tron.
+**View › Theme › Classic** switches to a plain macOS list layout with system controls. ⇧⌘T returns to Retro from Classic or Tron.
 
 | Theme | Look |
 |---|---|

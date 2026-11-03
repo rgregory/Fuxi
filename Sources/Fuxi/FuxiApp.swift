@@ -4,12 +4,13 @@ import SwiftUI
 @main
 struct FuxiApp: App {
     @StateObject private var model = AppModel()
-    /// "things" (default) or "classic". View ▸ Classic Layout flips it.
-    @AppStorage("uiStyle") private var uiStyle = "things"
-    /// View ▸ Theme choice. Empty means the theme this build was packaged with.
+    /// View ▸ Theme: "retro", "tron" or "classic". Empty means the theme this build was packaged with.
     @AppStorage("theme") private var themeChoice = ""
 
+    private var isClassic: Bool { themeChoice == "classic" }
     private var themeType: ThemeType { ThemeType(rawValue: themeChoice) ?? .bundled }
+    /// What the Theme menu shows as checked.
+    private var current: String { isClassic ? "classic" : themeType.rawValue }
 
     init() {
         // Lets `swift run` show a normal Dock app; harmless inside the .app bundle.
@@ -20,7 +21,7 @@ struct FuxiApp: App {
     var body: some Scene {
         WindowGroup("Fuxi") {
             Group {
-                if uiStyle == "classic" {
+                if isClassic {
                     // System controls throughout; the themed checkbox is for the main layout.
                     ContentView().toggleStyle(.checkbox)
                 } else {
@@ -34,17 +35,13 @@ struct FuxiApp: App {
             CommandGroup(after: .toolbar) {
                 Button("Reload Settings") { Task { await model.refresh() } }
                     .keyboardShortcut("r")
-                Toggle("Classic Layout", isOn: Binding(
-                    get: { uiStyle == "classic" },
-                    set: { uiStyle = $0 ? "classic" : "things" }
-                ))
-                .keyboardShortcut("l", modifiers: [.command, .shift])
-                Picker("Theme", selection: Binding(get: { themeType.rawValue }, set: { themeChoice = $0 })) {
+                Picker("Theme", selection: Binding(get: { current }, set: { themeChoice = $0 })) {
                     ForEach(ThemeType.allCases) { Text($0.title).tag($0.rawValue) }
+                    Text("Classic").tag("classic")
                 }
-                // ⇧⌘T flips between them.
-                Button(themeType == .tron ? "Switch to Retro" : "Switch to Tron") {
-                    themeChoice = (themeType == .tron ? ThemeType.retro : .tron).rawValue
+                // ⇧⌘T: back to Retro from anywhere; from Retro, to Tron.
+                Button(current == "retro" ? "Switch to Tron" : "Switch to Retro") {
+                    themeChoice = current == "retro" ? "tron" : "retro"
                 }
                 .keyboardShortcut("t", modifiers: [.command, .shift])
             }

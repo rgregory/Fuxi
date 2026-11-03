@@ -1,6 +1,6 @@
 import AppKit
 
-// Classic layout: standard macOS lists and controls, not themed. View ▸ Classic Layout (⇧⌘L).
+// Classic layout: standard macOS lists and controls, not themed. View ▸ Theme ▸ Classic.
 import Charts
 import SwiftUI
 
