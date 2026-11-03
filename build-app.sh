@@ -1,7 +1,7 @@
 #!/bin/bash
 # Builds Fuxi.app into ./build and signs it ad hoc for local use.
 # Theme names package extra copies with that theme as their default:
-#   ./build-app.sh steampunk retro tron
+#   ./build-app.sh tron
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -30,10 +30,9 @@ package() { # theme, app name, bundle id suffix
 package "" "Fuxi" ""
 for t in "$@"; do
     case "$t" in
-        steampunk)   package steampunk   "Fuxi Steampunk" steampunk ;;
         retro)       package retro       "Fuxi Retro"     retro ;;
         tron)        package tron        "Fuxi Tron"      tron ;;
-        *) echo "Unknown theme: $t (use steampunk, retro or tron)" >&2; exit 1 ;;
+        *) echo "Unknown theme: $t (use retro or tron)" >&2; exit 1 ;;
     esac
 done
 

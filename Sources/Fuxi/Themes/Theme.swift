@@ -3,17 +3,14 @@ import SwiftUI
 
 // Themes restyle the default layout: page and card backgrounds, text, accent, fonts and the
 // prominent buttons. Severity colours stay as they are so High still reads as red.
-// The classic layout is not themed.
 
 public enum ThemeType: String, CaseIterable, Identifiable {
-    case standard, steampunk, retro, tron
+    case retro, tron
 
     public var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .standard: return "Standard"
-        case .steampunk: return "Steampunk"
         case .retro: return "Retro"
         case .tron: return "Tron"
         }
@@ -21,8 +18,6 @@ public enum ThemeType: String, CaseIterable, Identifiable {
 
     var theme: any DashboardTheme {
         switch self {
-        case .standard: return StandardTheme()
-        case .steampunk: return SteampunkTheme()
         case .retro: return RetroTheme()
         case .tron: return TronTheme()
         }
@@ -31,20 +26,12 @@ public enum ThemeType: String, CaseIterable, Identifiable {
     /// Fonts to try in order when the theme's own font isn't installed.
     var fallbackFonts: [String] {
         switch self {
-        case .standard: return []
-        case .steampunk: return ["Baskerville", "Georgia"]
         case .retro: return []
         case .tron: return ["Orbitron", "AvenirNextCondensed-DemiBold", "DINCondensed-Bold"]
         }
     }
 
-    var colorScheme: ColorScheme? {
-        switch self {
-        case .standard: return nil
-        case .retro: return .light
-        case .steampunk, .tron: return .dark
-        }
-    }
+    var colorScheme: ColorScheme { self == .retro ? .light : .dark }
 
     /// The theme a build was packaged with (Info.plist key FuxiTheme), else Retro.
     static var bundled: ThemeType {
@@ -80,25 +67,10 @@ public extension DashboardTheme {
     var postureColumns: Int { 3 }
 }
 
-/// The system look: unchanged from before themes existed.
-public struct StandardTheme: DashboardTheme {
-    public let id: ThemeType = .standard
-    public let colors = ThemeColors(
-        background: Color(nsColor: .textBackgroundColor),
-        panelBackground: Color(nsColor: .controlBackgroundColor),
-        foreground: .primary,
-        border: Color.primary.opacity(0.1),
-        accent: .accentColor
-    )
-    public let fontName = ""
-    public func applyPanelStyle(to view: AnyView) -> AnyView { view }
-    public func applyButtonStyle(to view: AnyView) -> AnyView { view }
-}
-
 /// The active theme. Set by the root view before its children are built; the root is keyed
 /// on the theme so a switch rebuilds everything.
 enum ThemeStore {
-    static var current: any DashboardTheme = StandardTheme() {
+    static var current: any DashboardTheme = RetroTheme() {
         didSet { resolvedFont = resolveFont(current) }
     }
     private(set) static var resolvedFont = ""
@@ -108,20 +80,20 @@ enum ThemeStore {
     }
 }
 
-/// Theme lookups for views. Standard returns exactly what the views used before.
+/// Theme lookups for views.
 enum Fx {
     static var theme: any DashboardTheme { ThemeStore.current }
-    static var isStandard: Bool { theme.id == .standard }
+    static var isTron: Bool { theme.id == .tron }
 
     static var bg: Color { theme.colors.background }
     static var panel: Color { theme.colors.panelBackground }
     static var fg: Color { theme.colors.foreground }
     static var accent: Color { theme.colors.accent }
     static var border: Color { theme.colors.border }
-    static var muted: Color { isStandard ? .secondary : theme.colors.foreground.opacity(0.6) }
-    static var hairline: Color { isStandard ? Color.primary.opacity(0.1) : theme.colors.border.opacity(0.6) }
+    static var muted: Color { theme.colors.foreground.opacity(0.6) }
+    static var hairline: Color { theme.colors.border.opacity(isTron ? 0.6 : 0.25) }
     /// Gauge fill below the warning level.
-    static var bar: Color { isStandard ? .teal : theme.barColor }
+    static var bar: Color { theme.barColor }
 
     static func font(size: CGFloat, weight: Font.Weight = .regular) -> Font {
         let name = ThemeStore.resolvedFont
@@ -155,13 +127,72 @@ struct ThemedButtonStyle: ButtonStyle {
 }
 
 extension View {
-    /// The main action button: system prominent style, or the theme's button.
-    @ViewBuilder func fxProminent() -> some View {
-        if Fx.isStandard { buttonStyle(.borderedProminent) } else { buttonStyle(ThemedButtonStyle()) }
-    }
+    /// The main action button in the theme's style.
+    func fxProminent() -> some View { buttonStyle(ThemedButtonStyle()) }
 
-    /// Sidebar list background: system material, or the theme's panel colour.
-    @ViewBuilder func fxSidebar() -> some View {
-        if Fx.isStandard { self } else { scrollContentBackground(.hidden).background(Fx.panel) }
+    /// Sidebar list on the theme's panel colour.
+    func fxSidebar() -> some View { scrollContentBackground(.hidden).background(Fx.panel) }
+}
+
+// MARK: Controls
+
+/// Checkbox in the theme's style. Retro: square, 2-px black border, black tick.
+/// Tron: square cyan outline with a cyan tick.
+struct FxCheckbox: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        let ink = Fx.isTron ? Fx.accent : Color.black
+        return Button { configuration.isOn.toggle() } label: {
+            HStack(spacing: 8) {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(Fx.isTron ? Color.clear : Color.white)
+                    .overlay(RoundedRectangle(cornerRadius: 2).strokeBorder(ink, lineWidth: Fx.isTron ? 1.5 : 2))
+                    .overlay {
+                        if configuration.isOn {
+                            Image(systemName: "checkmark").font(.system(size: 10, weight: .heavy)).foregroundColor(ink)
+                        }
+                    }
+                    .frame(width: 16, height: 16)
+                configuration.label
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// One segment strip for filters. Retro: 2-px black border, hard shadow, chosen segment black.
+/// Tron: cyan outline, chosen segment cyan.
+struct FxSegments<T: Hashable>: View {
+    @Binding var selection: T
+    /// (value, label, keyboard shortcut) in order.
+    let options: [(T, String, KeyboardShortcut?)]
+
+    var body: some View {
+        let ink = Fx.isTron ? Fx.accent : Color.black
+        HStack(spacing: 0) {
+            ForEach(Array(options.enumerated()), id: \.offset) { i, o in
+                let on = o.0 == selection
+                if i > 0 { Rectangle().fill(ink).frame(width: Fx.isTron ? 1 : 2) }
+                Button { selection = o.0 } label: {
+                    Text(o.1)
+                        .font(Fx.font(size: 12, weight: on ? .semibold : .regular))
+                        .textCase(Fx.isTron ? .uppercase : nil)
+                        .lineLimit(1)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 4)
+                        .foregroundColor(on ? (Fx.isTron ? Fx.bg : .white) : (Fx.isTron ? Fx.accent : .black))
+                        .background(on ? ink : (Fx.isTron ? Color.clear : Color.white))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut(o.2)
+            }
+        }
+        .fixedSize()
+        .clipShape(RoundedRectangle(cornerRadius: Fx.isTron ? 0 : 5))
+        .overlay(RoundedRectangle(cornerRadius: Fx.isTron ? 0 : 5).strokeBorder(ink, lineWidth: Fx.isTron ? 1 : 2))
+        .compositingGroup()
+        .shadow(color: Fx.isTron ? Fx.accent.opacity(0.6) : .black,
+                radius: Fx.isTron ? 4 : 0, x: Fx.isTron ? 0 : 2, y: Fx.isTron ? 0 : 2)
     }
 }

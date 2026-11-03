@@ -4,8 +4,6 @@ import SwiftUI
 @main
 struct FuxiApp: App {
     @StateObject private var model = AppModel()
-    /// "things" (default) or "classic". View ▸ Classic Layout flips it.
-    @AppStorage("uiStyle") private var uiStyle = "things"
     /// View ▸ Theme choice. Empty means the theme this build was packaged with.
     @AppStorage("theme") private var themeChoice = ""
 
@@ -19,29 +17,18 @@ struct FuxiApp: App {
 
     var body: some Scene {
         WindowGroup("Fuxi") {
-            Group {
-                if uiStyle == "classic" {
-                    ContentView()
-                } else {
-                    themedRoot()
-                }
-            }
-            .environmentObject(model)
+            themedRoot()
+                .environmentObject(model)
             .frame(minWidth: 960, minHeight: 620)
         }
         .commands {
             CommandGroup(after: .toolbar) {
                 Button("Reload Settings") { Task { await model.refresh() } }
                     .keyboardShortcut("r")
-                Toggle("Classic Layout", isOn: Binding(
-                    get: { uiStyle == "classic" },
-                    set: { uiStyle = $0 ? "classic" : "things" }
-                ))
-                .keyboardShortcut("l", modifiers: [.command, .shift])
                 Picker("Theme", selection: Binding(get: { themeType.rawValue }, set: { themeChoice = $0 })) {
                     ForEach(ThemeType.allCases) { Text($0.title).tag($0.rawValue) }
                 }
-                // ⇧⌘T flips between the two favourites.
+                // ⇧⌘T flips between them.
                 Button(themeType == .tron ? "Switch to Retro" : "Switch to Tron") {
                     themeChoice = (themeType == .tron ? ThemeType.retro : .tron).rawValue
                 }
@@ -54,6 +41,9 @@ struct FuxiApp: App {
         let type = themeType
         ThemeStore.current = type.theme
         return ThingsRootView()
+            // Every button and checkbox takes the theme's style unless it sets its own.
+            .buttonStyle(ThemedButtonStyle())
+            .toggleStyle(FxCheckbox())
             .font(Fx.style(.body))
             .foregroundStyle(Fx.fg)
             .tint(Fx.accent)
@@ -78,69 +68,6 @@ enum Pane: String, CaseIterable, Identifiable, Hashable {
         case .explorer: return "list.bullet.rectangle"
         case .boot: return "power"
         case .history: return "clock.arrow.circlepath"
-        }
-    }
-}
-
-struct ContentView: View {
-    @EnvironmentObject var model: AppModel
-    @StateObject private var nav = NavigationUI()
-
-    var body: some View {
-        NavigationSplitView {
-            List(selection: $nav.pane) {
-                ForEach(Pane.allCases) { p in
-                    Label(p.rawValue, systemImage: p.icon)
-                        .badge(badge(for: p))
-                        .tag(p)
-                }
-            }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200)
-        } detail: {
-            // NavigationStack + .id forces the detail column to rebuild on every
-            // sidebar change; without it macOS keeps showing the first pane.
-            NavigationStack {
-                detail(for: nav.pane ?? .overview)
-            }
-            .id(nav.pane ?? .overview)
-        }
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    Task { await model.refresh() }
-                } label: {
-                    Label("Reload", systemImage: "arrow.clockwise")
-                }
-                .help("Read all kernel settings again")
-                .disabled(model.isLoading)
-            }
-        }
-        .overlay {
-            if model.snapshot.entries.isEmpty && model.isLoading {
-                ProgressView("Reading kernel settings…")
-            }
-        }
-        .alert(item: $model.alert) { a in
-            Alert(title: Text(a.title), message: Text(a.message))
-        }
-    }
-
-    @ViewBuilder
-    private func detail(for pane: Pane) -> some View {
-        switch pane {
-        case .overview: OverviewView()
-        case .findings: FindingsView()
-        case .explorer: ExplorerView()
-        case .boot: BootView()
-        case .history: HistoryView()
-        }
-    }
-
-    private func badge(for pane: Pane) -> Int {
-        switch pane {
-        case .findings: return model.findings.filter { $0.actionable }.count
-        case .boot: return model.managed.count
-        default: return 0
         }
     }
 }

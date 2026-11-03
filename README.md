@@ -66,7 +66,7 @@ Select several and choose **Apply Selected…** to export them as one script, or
 
 ### All Keys
 
-Every key from `sysctl -a`, searchable by key or value and filterable by namespace. **Reviewed keys only** narrows the list to the keys Fuxi checks. Double-click a row, or right-click › **Set Value…**, to change any writable key. The kernel rejects keys that are read-only or values out of range; the script prints which.
+Every key from `sysctl -a`, searchable by key or value and filterable by namespace. **Reviewed only** narrows the list to the keys Fuxi checks. Double-click a row, or right-click › **Set Value…**, to change any writable key. The kernel rejects keys that are read-only or values out of range; the script prints which.
 
 ### At Boot
 
@@ -78,26 +78,24 @@ Each row can **Restore Default…** (write the macOS value back) or **Stop Keepi
 
 Every change with the time, the old value and the new value, and a **Revert…** button. **Clear History** empties the list without changing any settings.
 
-### Layouts and themes
+### Themes
 
-The default layout uses cards and sections. **View › Classic Layout** (⇧⌘L) switches to a standard list layout. Both show the same data.
-
-**View › Theme** restyles the default layout. Retro is the default, and **⇧⌘T** flips between Retro and Tron:
-
-![Retro theme reference: white panels, black borders, hard shadows](docs/retro-reference.png)
+Fuxi has two themes. **Retro** is the default; **⇧⌘T** flips to **Tron** and back, and **View › Theme** lists both.
 
 | Theme | Look |
 |---|---|
-| Standard | The macOS system look |
-| Retro | Off-white window, white panels with 2-px black borders and hard black drop shadows, square corners, monochrome, system font |
-| Tron | Black grid, glowing cyan chamfered panels, uppercase glowing headings, Orbitron (or a condensed sans) |
-| Steampunk | Mahogany and brass, corner brackets, Hoefler Text |
+| Retro | Off-white window, white panels with 2-px black borders and hard black drop shadows, slightly rounded buttons, square checkboxes, black segment strips, monochrome, system font |
+| Tron | Black grid, glowing cyan chamfered panels, uppercase glowing headings, cyan outlined controls, Orbitron (or a condensed sans) |
 
-Severity colours stay the same in every theme. To build copies that open in a theme by default:
+Severity colours stay the same in both.
+
+![Retro theme reference: white panels, black borders, hard shadows](docs/retro-reference.png)
+
+To build a copy that opens in Tron by default:
 
 ```sh
-./build-app.sh retro tron steampunk
-open build/"Fuxi Retro.app" build/"Fuxi Tron.app"
+./build-app.sh tron
+open build/"Fuxi Tron.app"
 ```
 
 ## What Fuxi checks
@@ -254,9 +252,9 @@ Sources/Fuxi/
   ScriptExport.swift     The apply and boot scripts, save panel, clipboard command
   Persistence.swift      state.json and reading /etc/sysctl.conf
   XProtect.swift         XProtect and Software Update state
-  Themes/                Theme protocol, Retro, Tron and Steampunk
-  Things.swift           Default card layout
-  Views.swift            Classic layout
+  Themes/                Theme protocol, Retro and Tron, themed controls
+  Things.swift           Sidebar and the five pages
+  Shared.swift           Finding rows, Set Value sheet, boot rows
 ```
 
 ## Adding a check

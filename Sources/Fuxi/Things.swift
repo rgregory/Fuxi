@@ -1,8 +1,7 @@
 import AppKit
 import SwiftUI
 
-// Things 3–inspired layout. The classic layout (ContentView in FuxiApp.swift / Views.swift) is untouched;
-// switch with View ▸ Classic Layout. Setting is stored in UserDefaults key "uiStyle".
+// The app's layout: sidebar plus card pages, styled by the active theme (Retro or Tron).
 
 private let mono = Font.system(.body, design: .monospaced)
 private let pageMaxWidth: CGFloat = 760
@@ -245,20 +244,12 @@ struct ThingsCard<Content: View>: View {
     var padding: CGFloat = 0
     @ViewBuilder var content: Content
     var body: some View {
-        if Fx.isStandard {
+        // The theme's panel adds its own padding.
+        Fx.theme.applyPanelStyle(to: AnyView(
             VStack(alignment: .leading, spacing: 0) { content }
-                .padding(padding)
+                .padding(max(0, padding - 12))
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .controlBackgroundColor)))
-                .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.primary.opacity(0.1), lineWidth: 0.5))
-        } else {
-            // The theme's panel adds its own padding.
-            Fx.theme.applyPanelStyle(to: AnyView(
-                VStack(alignment: .leading, spacing: 0) { content }
-                    .padding(max(0, padding - 12))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            ))
-        }
+        ))
     }
 }
 
@@ -286,31 +277,13 @@ struct ThingsPills<T: Hashable>: View {
     @Binding var selection: T
 
     var body: some View {
+        // Scrolls sideways when there are more options than fit (All Keys namespaces).
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 4) {
-                ForEach(Array(options.enumerated()), id: \.element.id) { (i: Int, o: PillOption<T>) in
-                    let on: Bool = o.value == selection
-                    let shortcut: KeyboardShortcut? = i < 9
-                        ? KeyboardShortcut(KeyEquivalent(Character(String(i + 1))), modifiers: .command) : nil
-                    Button { selection = o.value } label: {
-                        HStack(spacing: 5) {
-                            Text(o.label)
-                            if let c = o.count {
-                                Text(c.formatted()).foregroundStyle(on ? Fx.accent.opacity(0.7) : Fx.muted.opacity(0.7))
-                            }
-                        }
-                        .font(Fx.font(size: 12, weight: .medium))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(on ? Fx.accent.opacity(0.14) : Color.clear))
-                        .foregroundStyle(on ? Fx.accent : Fx.muted)
-                        .contentShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .keyboardShortcut(shortcut)
-                    .help(i < 9 ? "⌘\(i + 1)" : "")
-                }
-            }
+            FxSegments(selection: $selection, options: options.enumerated().map { (i, o) -> (T, String, KeyboardShortcut?) in
+                (o.value, o.count.map { "\(o.label) \($0.formatted())" } ?? o.label,
+                 i < 9 ? KeyboardShortcut(KeyEquivalent(Character(String(i + 1))), modifiers: .command) : nil)
+            })
+            .padding(.trailing, 3).padding(.bottom, 3)   // room for the hard shadow
         }
     }
 }
@@ -355,7 +328,7 @@ struct ThingsOverview: View {
                                     VStack(alignment: .leading, spacing: 1) {
                                         Text(f.label.uppercased()).font(Fx.style(.caption2)).foregroundStyle(.secondary)
                                         Text(f.value)
-                                            .font(Fx.isStandard ? .system(.callout, design: .monospaced) : Fx.style(.callout).monospacedDigit())
+                                            .font(Fx.style(.callout).monospacedDigit())
                                             .lineLimit(2).minimumScaleFactor(0.8)
                                             .fixedSize(horizontal: false, vertical: true)
                                             .textSelection(.enabled)
@@ -403,8 +376,7 @@ struct ThingsOverview: View {
 
             if !model.posture.isEmpty {
                 let good = model.posture.filter { $0.status == .good }.count
-                // Two columns in themes: their fonts are wider and their panels pad more.
-                let columns = Fx.isStandard ? 3 : Fx.theme.postureColumns
+                let columns = Fx.theme.postureColumns
                 let per = (model.posture.count + columns - 1) / columns
                 let cols: [[PostureItem]] = stride(from: 0, to: model.posture.count, by: max(per, 1)).map {
                     Array(model.posture[$0..<min($0 + per, model.posture.count)])
@@ -443,7 +415,7 @@ struct ThingsGaugeRow: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(.vertical, Fx.isStandard ? 7 : 4)
+        .padding(.vertical, 4)
         .help(gauge.note ?? gauge.name)
     }
 }
@@ -461,7 +433,7 @@ struct ThingsPostureRow: View {
                 .foregroundStyle(item.status == .attention ? Color.orange : Fx.muted)
                 .lineLimit(1).truncationMode(.middle)
         }
-        .padding(.vertical, Fx.isStandard ? 5 : 3)
+        .padding(.vertical, 3)
         .contentShape(Rectangle())
         .help(item.detail)
     }
@@ -604,7 +576,6 @@ struct ThingsExplorer: View {
                 .background(RoundedRectangle(cornerRadius: 6).fill(Fx.panel))
                 .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Fx.hairline, lineWidth: 0.5))
                 Toggle("Reviewed only", isOn: $ui.flaggedOnly)
-                    .toggleStyle(.checkbox)
                     .help("Show only keys Fuxi reviews")
                 Button("Set Value…") { ui.editing = entry(ui.selection) }
                     .disabled(ui.selection == nil)
