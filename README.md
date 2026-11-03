@@ -4,9 +4,8 @@ Fuxi is a native macOS app that reviews the kernel's `sysctl` settings for secur
 
 It is written for a developer Mac on Apple silicon: one that runs containers, VMs, VPN tunnels and local language models. The recommendations assume that. Read each finding's explanation before applying it to a different kind of machine.
 
-![Fuxi Overview: system facts, kernel limits and security posture](docs/overview.png)
+![Fuxi Overview in the Retro theme: system facts, kernel limits and security posture](docs/retro-reference.png)
 
-![Fuxi Findings: recommended changes grouped by severity, with current and target values](docs/findings.png)
 
 - [Requirements](#requirements)
 - [Build and install](#build-and-install)
@@ -91,7 +90,6 @@ Every change with the time, the old value and the new value, and a **Revert…**
 
 Severity colours stay the same in both.
 
-![Retro theme reference: white panels, black borders, hard shadows](docs/retro-reference.png)
 
 To build a copy that opens in Tron by default:
 

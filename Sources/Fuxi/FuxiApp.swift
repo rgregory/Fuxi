@@ -4,8 +4,10 @@ import SwiftUI
 @main
 struct FuxiApp: App {
     @StateObject private var model = AppModel()
-    /// View ▸ Theme: "retro", "tron" or "classic". Empty means the theme this build was packaged with.
-    @AppStorage("theme") private var themeChoice = ""
+    /// View ▸ Theme: "retro", "tron" or "classic". Empty means the theme this build was packaged
+    /// with (Retro unless built with `./build-app.sh tron`). The key is new so every copy starts in
+    /// Retro once, whatever the old "theme"/"uiStyle" settings say.
+    @AppStorage("appTheme") private var themeChoice = ""
 
     private var isClassic: Bool { themeChoice == "classic" }
     private var themeType: ThemeType { ThemeType(rawValue: themeChoice) ?? .bundled }
