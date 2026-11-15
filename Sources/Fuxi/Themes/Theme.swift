@@ -5,7 +5,7 @@ import SwiftUI
 // prominent buttons. Severity colours stay as they are so High still reads as red.
 
 public enum ThemeType: String, CaseIterable, Identifiable {
-    case retro, tron
+    case retro, tron, carbon, slate
 
     public var id: String { rawValue }
 
@@ -13,6 +13,8 @@ public enum ThemeType: String, CaseIterable, Identifiable {
         switch self {
         case .retro: return "Retro"
         case .tron: return "Tron"
+        case .carbon: return "Carbon"
+        case .slate: return "Slate UI"
         }
     }
 
@@ -20,6 +22,8 @@ public enum ThemeType: String, CaseIterable, Identifiable {
         switch self {
         case .retro: return RetroTheme()
         case .tron: return TronTheme()
+        case .carbon: return CarbonTheme()
+        case .slate: return SlateTheme()
         }
     }
 
@@ -28,10 +32,12 @@ public enum ThemeType: String, CaseIterable, Identifiable {
         switch self {
         case .retro: return []
         case .tron: return ["Orbitron", "AvenirNextCondensed-DemiBold", "DINCondensed-Bold"]
+        case .carbon: return ["IBMPlexSans-Regular", "Helvetica Neue"]
+        case .slate: return []
         }
     }
 
-    var colorScheme: ColorScheme { self == .retro ? .light : .dark }
+    var colorScheme: ColorScheme { self == .retro || self == .carbon ? .light : .dark }
 
     /// The theme a build was packaged with (Info.plist key FuxiTheme), else Retro.
     static var bundled: ThemeType {
