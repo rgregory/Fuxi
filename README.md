@@ -1,8 +1,9 @@
 # Fuxi
 
-Fuxi is a native macOS app that reviews the kernel's `sysctl` settings for security and performance. It explains each finding in plain language and turns the changes you pick into a short shell script that you read and run with `sudo`. Fuxi itself never runs anything as root. It records every change so you can revert it, and can export a script that keeps your changes across restarts with `/etc/sysctl.conf`.
+Fuxi is a native macOS app that reviews the kernel's `sysctl` settings for security and performance. It explains each finding in plain language and turns the changes you pick into a short shell script that you read and run with `sudo`. 
 
-It is written for a developer Mac on Apple silicon: one that runs containers, VMs, VPN tunnels and local language models. The recommendations assume that. Read each finding's explanation before applying it to a different kind of machine.
+Fuxi itself never runs anything as root. It records every change so you can revert it, and can export a script that keeps your changes across restarts with `/etc/sysctl.conf`.
+
 
 ![Fuxi Overview in the Retro theme: system facts, kernel limits and security posture](docs/retro-reference.png)
 
